@@ -1,0 +1,13 @@
+Add setting storage and loading
+    Currently file locations are hardcoded!!!
+Improve logging
+    Probably use a 3rd party logger
+
+
+
+Rewrite CPU
+Implement GTE
+Rewrite Debugger
+    Current one is quite bad
+    Should decompile code
+Create JIT compiler
