@@ -1,7 +1,7 @@
 #ifndef OPEN_GL_hpp 
 #define OPEN_GL_hpp
 
-#include <renderer/renderAPI.h>
+#include <renderer/renderAPI.hh>
 
 #include <GL/glew.h>
 

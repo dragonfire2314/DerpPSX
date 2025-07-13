@@ -1,7 +1,7 @@
 #ifndef RENDER_API_hpp 
 #define RENDER_API_hpp
 
-#include <gpu.h>
+#include <gpu.hh>
     
 class Core;
 

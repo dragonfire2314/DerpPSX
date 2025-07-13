@@ -1,7 +1,7 @@
 /* Base structure and authentic idea PSeudo (Credits: Dennis Koluris) */
-#include "mem.h"
-#include <R3000A.h>
-#include <core.h>
+#include "mem.hh"
+#include <cpu/cpu.hh>
+#include <core.hh>
 #include <stdio.h>
 #include <string.h>
 

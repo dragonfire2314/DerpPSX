@@ -1,29 +1,36 @@
-#include "app.h"
+#include "app.hh"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 // #include "../extern/stb_image_write.h"
 
-#include <logging.h>
+#include <tomlplusplus/toml.hpp>
+
+#include <logging.hh>
+#include <configuration.hh>
 #include <chrono>
 
-Application::Application(Application_Config &_config)
+Application::Application()
 {
-    //Copy Configuration
-    config = _config;
+	configuration.loadConfiguration();
 
-	core.init();
+	core.init(&configuration);
 
     glfw_init();
     imgui_init();
 
 	debugger = new GUI(&core);
 
-	runner = new Debugger(&core);
+	runner = new Runner(&core);
 
 	runner->emu_init();
 
 	core.addDebugger((Debugger*)runner);
+}
+
+std::string Application::getBiosFile()
+{
+	return configuration.getAppConfiguration().biosLocation;
 }
 
 void Application::Run()
@@ -98,7 +105,7 @@ void Application::glfw_init()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL 
 
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow(config.width, config.height, "DerpPSX", NULL, NULL);
+	window = glfwCreateWindow(configuration.getAppConfiguration().width, configuration.getAppConfiguration().height, configuration.getAppConfiguration().windowName.c_str(), NULL, NULL);
 	if (window == NULL) {
 		fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible.\n");
 		glfwTerminate();

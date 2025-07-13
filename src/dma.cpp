@@ -1,6 +1,6 @@
-#include <dma.h>
+#include <dma.hh>
 
-#include <core.h>
+#include <core.hh>
 #include <disk/disk.hh>
 
 DMA::DMA(Core *_core)
@@ -64,7 +64,7 @@ void DMA::dmaChannelControl(ub channel, uw data)
 	//Check if DMA should start
 	if (channels[channel].enabled && channels[channel].start) {
 		//std::cout << std::hex << (int)channel << "\n";
-		//system("PAUSE");
+		//int c = getchar();;
 
 		//Do DMA
 		switch (channel) 
@@ -191,7 +191,7 @@ void DMA::dmaGPU()
 	//Trigger interupt
 	core->getIO()->IRQ(IO_Controller::DMA);
 
-	//system("PAUSE");
+	//int c = getchar();;
 }
 
 void DMA::dmaOTC()
@@ -231,7 +231,7 @@ void DMA::dmaOTC()
 void DMA::dmaCDROM()
 {
 	// printf("CDROM DMA\n");
-	// system("PAUSE");
+	// int c = getchar();;
 
 	//Data copy mode
 	int inc = 0;
@@ -241,7 +241,7 @@ void DMA::dmaCDROM()
 	uw* p = (uw*)&core->getMem()->ram.ptr[channels[3].baseAddress & 0x1ffffc];
 
 	// printf("DMA CDROM: %i\n", channels[3].numWords);
-	// system("PAUSE");
+	// int c = getchar();;
 
 	for (uw i = 0; i < channels[3].numWords; i++)
 	{
@@ -262,7 +262,7 @@ void DMA::dmaCDROM()
 
 	// printf("\n");
 
-	// system("PAUSE");
+	// int c = getchar();;
 
 	//end
 	channels[3].start = 0;

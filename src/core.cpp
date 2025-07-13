@@ -1,15 +1,17 @@
-#include <core.h>
+#include <core.hh>
 
-void Core::init() 
+void Core::init(Configuration* _configuration) 
 {
     gpu = new GPU(this);
     mem = new CstrMem(this);
-    cpu = new CstrMips(this);
+    cpu = new CPU(this);
     dma = new DMA(this);
     io = new IO_Controller(this);
     renderer = new OpenGL(this);
     timer = new Timer(this);
     cdrom = new CDROM(this);
+
+    configuration = _configuration;
 
     mem->init();
     gpu->gpu_init();
@@ -36,7 +38,7 @@ CstrMem* Core::getMem()
 {
     return mem;
 }
-CstrMips* Core::getCPU()
+CPU* Core::getCPU()
 {
     return cpu;
 }
@@ -59,4 +61,8 @@ Timer* Core::getTimer()
 CDROM* Core::getCDROM()
 {
     return cdrom;
+}
+Configuration* Core::getConfiguration()
+{
+    return configuration;
 }

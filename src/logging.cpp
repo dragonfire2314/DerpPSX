@@ -1,4 +1,4 @@
-#include <logging.h>
+#include <logging.hh>
 #include <algorithm>
 
 namespace LOG 

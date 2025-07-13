@@ -3,23 +3,24 @@
 
 #include <string.h>
 
-#include <gpu.h>
-#include <R3000A.h>
-#include <mem.h>
-#include <io_controller.h>
-#include <dma.h>
-#include <renderer/renderAPI.h>
-#include <renderer/OpenGL/opengl.h>
-#include <timer.h>
-#include <runner/debug/debugger.h>
-#include <cdrom.h>
+#include <gpu.hh>
+#include <cpu/cpu.hh>
+#include <mem.hh>
+#include <io_controller.hh>
+#include <dma.hh>
+#include <renderer/renderAPI.hh>
+#include <renderer/OpenGL/opengl.hh>
+#include <timer.hh>
+#include <runner/debug/debugger.hh>
+#include <cdrom.hh>
+#include <configuration.hh>
 
 class Core 
 {
 private:
     GPU* gpu;
     CstrMem* mem;
-    CstrMips* cpu;
+    CPU* cpu;
     DMA* dma;
     IO_Controller* io;
     RenderAPI* renderer;
@@ -27,23 +28,26 @@ private:
     CDROM* cdrom;
 
     Debugger* debugger = nullptr;
+
+    Configuration* configuration;
 public:
     Core(){}
     ~Core(){}
 
-    void init();
+    void init(Configuration* _configuration);
 
     void addDebugger(Debugger* debugger);
     Debugger* getDebugger();
 
     GPU* getGPU();
     CstrMem* getMem();
-    CstrMips* getCPU();
+    CPU* getCPU();
     DMA* getDMA();
     IO_Controller* getIO();
     RenderAPI* getRenderer();
     Timer* getTimer();
     CDROM* getCDROM();
+    Configuration* getConfiguration();
 };
 
 #endif

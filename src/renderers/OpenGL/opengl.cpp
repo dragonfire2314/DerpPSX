@@ -1,9 +1,9 @@
-#include <renderer/OpenGL/opengl.h>
-#include <gpu.h>
+#include <renderer/OpenGL/opengl.hh>
+#include <gpu.hh>
 
-#include <core.h>
+#include <core.hh>
 
-#include <logging.h>
+#include <logging.hh>
 
 OpenGL::OpenGL(Core* _core)
 {
@@ -55,11 +55,11 @@ void OpenGL::render()
 	//Render Tris to texture (size of VRAM (1024 * 512))
 	for (auto tri : tris)
 	{
-		printf("tri.v1.pos.x: %i, tri.v1.pos.y: %i\n", tri.v1.pos.x, tri.v1.pos.y);
+		// printf("tri.v1.pos.x: %i, tri.v1.pos.y: %i\n", tri.v1.pos.x, tri.v1.pos.y);
 		// printf("tri.v1.color.r: %i,, tri.v1.color.g: %i,, tri.v1.color.b: %i,\n", tri.v1.color.r, tri.v1.color.g, tri.v1.color.b);
-		printf("tri.v1.texCoord.x: %i, tri.v1.texCoord.y: %i\n", tri.v1.texCoord.x, tri.v1.texCoord.y);
-		printf("tri.v2.texCoord.x: %i, tri.v2.texCoord.y: %i\n", tri.v2.texCoord.x, tri.v2.texCoord.y);
-		printf("tri.v3.texCoord.x: %i, tri.v3.texCoord.y: %i\n", tri.v3.texCoord.x, tri.v3.texCoord.y);
+		// printf("tri.v1.texCoord.x: %i, tri.v1.texCoord.y: %i\n", tri.v1.texCoord.x, tri.v1.texCoord.y);
+		// printf("tri.v2.texCoord.x: %i, tri.v2.texCoord.y: %i\n", tri.v2.texCoord.x, tri.v2.texCoord.y);
+		// printf("tri.v3.texCoord.x: %i, tri.v3.texCoord.y: %i\n", tri.v3.texCoord.x, tri.v3.texCoord.y);
 		const GLushort g_vertex_buffer_data[] = {
 			//POSITION						//COLOR												//UV
 			tri.v1.pos.x, tri.v1.pos.y, 	tri.v1.color.r, tri.v1.color.g, tri.v1.color.b,		tri.v1.texCoord.x, tri.v1.texCoord.y,
@@ -85,10 +85,10 @@ void OpenGL::render()
 		glVertexAttribIPointer(2, 2, GL_SHORT, 7 * sizeof(GLushort), (void*)(5 * sizeof(GLushort)));
 
 		glUseProgram(shader);
-		(tri.clutXloc > 0) ? printf("TEXTURE\n") : printf("NOT TEX\n");
+		// (tri.clutXloc > 0) ? printf("TEXTURE\n") : printf("NOT TEX\n");
 		glUniform1i(glGetUniformLocation(shader, "vram"), 0);
-		printf("drawingAreaTopLeft: %i, : %i\n", core->getGPU()->drawingAreaTopLeftX, core->getGPU()->drawingAreaTopLeftY);
-		printf("drawingAreaBotRight: %i, : %i\n", core->getGPU()->drawingAreaBotRightX, core->getGPU()->drawingAreaBotRightY);
+		// printf("drawingAreaTopLeft: %i, : %i\n", core->getGPU()->drawingAreaTopLeftX, core->getGPU()->drawingAreaTopLeftY);
+		// printf("drawingAreaBotRight: %i, : %i\n", core->getGPU()->drawingAreaBotRightX, core->getGPU()->drawingAreaBotRightY);
 		// glUniform2i(glGetUniformLocation(shader, "drawingAreaTopLeft"), core->getGPU()->drawingAreaTopLeftX, core->getGPU()->drawingAreaTopLeftY);
 		glUniform2i(glGetUniformLocation(shader, "drawingAreaTopLeft"), 0, 0);
 		glUniform2i(glGetUniformLocation(shader, "drawingAreaBotRight"), core->getGPU()->drawingAreaBotRightX, core->getGPU()->drawingAreaBotRightY);
@@ -96,8 +96,8 @@ void OpenGL::render()
 		glUniform1i(glGetUniformLocation(shader, "isTexture"), (tri.clutXloc > 0) ? true : false);
 		glUniform1i(glGetUniformLocation(shader, "bitDepth"), core->getGPU()->status.colorDepth);
 		//Texture stuff
-		printf("clutXloc: %i, clutYloc: %i\n", tri.clutXloc, tri.clutYloc);
-		printf("texPageX: %i, texPageY: %i\n", tri.texPageX, tri.texPageY);
+		// printf("clutXloc: %i, clutYloc: %i\n", tri.clutXloc, tri.clutYloc);
+		// printf("texPageX: %i, texPageY: %i\n", tri.texPageX, tri.texPageY);
 		glUniform2i(glGetUniformLocation(shader, "clut"), tri.clutXloc, tri.clutYloc);
 		glUniform2i(glGetUniformLocation(shader, "texPage"), tri.texPageX, tri.texPageY);
 		// printf("drawingAreaTopLeftX: %i, drawingAreaTopLeftY: %i\n", core->getGPU()->drawingAreaTopLeftX, core->getGPU()->drawingAreaTopLeftY);
@@ -517,7 +517,7 @@ GLuint OpenGL::gpuLoadShaders(const char* vertex_file_path, const char* fragment
 		std::vector<char> VertexShaderErrorMessage(InfoLogLength + 1);
 		glGetShaderInfoLog(VertexShaderID, InfoLogLength, NULL, &VertexShaderErrorMessage[0]);
 		printf("%s\n", &VertexShaderErrorMessage[0]);
-		system("PAUSE");
+		int c = getchar();;
 	}
 
 	// Compile Fragment Shader
@@ -533,7 +533,7 @@ GLuint OpenGL::gpuLoadShaders(const char* vertex_file_path, const char* fragment
 		std::vector<char> FragmentShaderErrorMessage(InfoLogLength + 1);
 		glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, &FragmentShaderErrorMessage[0]);
 		printf("%s\n", &FragmentShaderErrorMessage[0]);
-		system("PAUSE");
+		int c = getchar();;
 	}
 
 	// Link the program
@@ -550,7 +550,7 @@ GLuint OpenGL::gpuLoadShaders(const char* vertex_file_path, const char* fragment
 		std::vector<char> ProgramErrorMessage(InfoLogLength + 1);
 		glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
 		printf("%s\n", &ProgramErrorMessage[0]);
-		system("PAUSE");
+		int c = getchar();;
 	}
 
 	glDetachShader(ProgramID, VertexShaderID);

@@ -1,7 +1,7 @@
 #ifndef CDROM_hpp 
 #define CDROM_hpp
 
-#include <global.h>
+#include <global.hh>
 #include <deque>
 #include <disk/disk.hh>
 
@@ -29,7 +29,7 @@ private:
             else 
             {
                 printf("ERROR FIFO overfilled");
-                system("PAUSE");
+                int c = getchar();;
                 return false;
             }
         }
@@ -182,6 +182,7 @@ private:
     void Command_GetStat();
     void Command_ReadTOC();
     void Command_GetID();
+    void Command_DeMute();
     void Command_SetLoc();
     void Command_SeekL();
     void Command_SetMode();
@@ -191,6 +192,7 @@ private:
 
     void addInterrupt(ub type, int delay = 50000) 
     {
+        // fprintf(stderr, "add interrtupt\n");
         interruptFIFO.push(Interrupt(type, delay));
     }
 

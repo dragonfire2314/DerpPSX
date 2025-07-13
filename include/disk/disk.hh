@@ -1,7 +1,7 @@
 #ifndef DISK_HPP
 #define DISK_HPP
 
-#include <global.h>
+#include <global.hh>
 #include <fstream>
 
 class Disk 

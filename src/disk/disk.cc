@@ -21,7 +21,7 @@ void Disk::seek(ub amm, ub ass, ub asect)
     // printf("amm: %x\n", amm);
     // printf("ass: %x\n", ass);
     // printf("asect: %x\n", asect);
-    // system("PAUSE");
+    // int c = getchar();;
 
     fileStream.seekg(location_to_seek);
 }

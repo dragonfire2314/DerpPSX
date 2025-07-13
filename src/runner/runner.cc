@@ -1,7 +1,7 @@
 #include <runner/runner.hh>
 
-#include <core.h>
-#include <logging.h>
+#include <core.hh>
+#include <logging.hh>
 
 Runner::Runner(Core* _core)
 {
@@ -30,7 +30,7 @@ void Runner::emu_init()
 {
     //Load bios
 	// std::ifstream Openfile("J:/Downloads/ps1 roms/psxtest_gte", std::ios::binary | std::ios::in);
-	std::ifstream Openfile("J:/Downloads/ps1 roms/SCPH1001.bin", std::ios::binary | std::ios::in);
+	std::ifstream Openfile(core->getConfiguration()->getAppConfiguration().biosLocation, std::ios::binary | std::ios::in);
 	uint32_t size;
 	if (!Openfile) 
 	{

@@ -1,8 +1,8 @@
 /* Base structure and authentic idea PSeudo (Credits: Dennis Koluris) */
 
-#include "R3000A.h"
-#include <core.h>
-#include <logging.h>
+#include "R3000A.hh"
+#include <core.hh>
+#include <logging.hh>
 
 /*  6-bit */
 #define opcode \
@@ -30,12 +30,6 @@
 
 #define opcodeLWx(o, d) \
     base[rt] = (base[rt] & mask[d][ob & 3]) | (core->getMem()->read<uw>(ob & ~3) o shift[d][ob & 3])
-    
-// SLLV
-//
-// 32 | 16 |  8 |  4 |  2 |  1 |
-// ---|----|----|----|----|----| -> 4
-//  0 |  0 |  0 |  1 |  0 |  0 |
 
 void CstrMips::init()
 {
@@ -72,7 +66,10 @@ void CstrMips::setpc(uw addr) {
 
 void CstrMips::bootstrap() {
     while(pc != 0x80030000) {
-        step(false);
+        // step(false);
+        fprintf(stderr, "BOOTSTRAP\n");
+
+        int c = std::cin.get();
     }
 }
 
@@ -84,6 +81,8 @@ void CstrMips::run() {
 }
 
 void CstrMips::step(bool branched) {
+
+    // core->getTimer()->systemclock();
 
 	//SysCall Bios A table detection
 	if ((pc & 0xFFFFF) == 0xA0) {
@@ -98,7 +97,7 @@ void CstrMips::step(bool branched) {
         case 0x0b:
             break;
         case 0x3d:
-            printf("\033[1;34m%c\033[0m", (char)base[4]);
+            // printf("\033[1;34m%c\033[0m", (char)base[4]);
             //std::cout << (char)cpu.base[4];
             break;
         default:
@@ -110,6 +109,11 @@ void CstrMips::step(bool branched) {
 		// bios.C0_Call();
 		// printf("[SYS] C Bios call: %x, %x \n", pc, base[9]);
 	}
+
+    if ((0xA0 == (pc & 0x1FFFFFFF) && base[9] == 0x3C) || (0xB0 == (pc & 0x1FFFFFFF) && base[9] == 0x3D))
+    {
+        printf("\033[1;34m%c\033[0m", (char)base[4]);
+    }
 
 	//Printf
 	// if (pc == 0xbfc018e0) {
@@ -156,10 +160,75 @@ void CstrMips::step(bool branched) {
        }
     }
 	
+    if (pc == 0x80030000) 
+    {
+        std::ifstream exeFile("tests/psxtest_cpu.exe", std::ios::binary | std::ios::in);
+        uint32_t size;
+        if (!exeFile) 
+        {
+            std::cerr << "Error: " << strerror(errno);
+            LOG::error(LOG::SystemLocation::APP, "EXE failed to load");
+            fprintf(stderr, "Cant open EXE???\n");
+            exit(1);
+        }
+
+        // Get length of file
+        exeFile.seekg(0, std::ios::end);
+        size = exeFile.tellg();
+        exeFile.seekg(0, std::ios::beg);
+
+        // core->getMem()->ram.ptr;
+        uint8_t* exe_data = new uint8_t[size];
+        exeFile.read((char*)exe_data, size);
+
+        struct PSX_EXE_HEADER
+        {
+            uint8_t id[8];
+            uint8_t zeros[8];
+            uint32_t initalPC;
+            uint32_t initalR28;
+            uint32_t exeAddress;
+            uint32_t exeSize;
+            uint32_t dataStartAddress;
+            uint32_t dataSectionSize;
+            uint32_t bssStartAddress;
+            uint32_t bssSectionSize;
+            uint32_t initalR29_30;
+            // TODO - Finish header
+        };
+
+        PSX_EXE_HEADER* exeHeader;
+
+        exeHeader = (PSX_EXE_HEADER*)exe_data;
+
+        fprintf(stderr, "PC: %x\n", exeHeader->initalPC);
+        fprintf(stderr, "28: %x\n", exeHeader->initalR28);
+        fprintf(stderr, "address: %x\n", exeHeader->exeAddress);
+        fprintf(stderr, "size: %x\n", exeHeader->exeSize);
+        fprintf(stderr, "29_30: %x\n", exeHeader->initalR29_30);
+        fprintf(stderr, "size: %x\n", size);
+
+        int exeSizeInBytes = exeHeader->exeSize;
+
+        // core->getMem()->ram.ptr
+        memcpy(core->getMem()->ram.ptr + (exeHeader->exeAddress & 0x1FFFFF), exe_data + 0x800, exeSizeInBytes - 2048);
+        
+        setpc(exeHeader->initalPC);
+        base[28] = exeHeader->initalR28; 
+        base[29] = exeHeader->initalR29_30; 
+        base[30] = exeHeader->initalR29_30; 
+    }
+
 	uw code = *instCache++; pc += 4;
     base[0] = 0;
     opcodeCount++;
 	//rootCounters.tick();
+
+
+
+    int rt_value = rt;
+    int rs_value = rs;
+
 
 	if (code == 0x0ff00698) 
 	{
@@ -239,7 +308,15 @@ void CstrMips::step(bool branched) {
                     break;
                     
                 case 26: // DIV
-                    if (base[rt]) {
+                    if (0 == base[rt]) {
+                        res.u32[0] = ((sw)base[rs] < 0) ? 0x00000001 : 0xffffffff;
+                        res.u32[1] = rs;
+                    }
+                    else if((uw)base[rs] == 0x80000000 && (uw)base[rt] == 0xffffffff) {
+                        res.u32[0] = 0x80000000;
+                        res.u32[1] = 0x00000000;
+                    }
+                    else {
                         res.u32[0] = (sw)base[rs] / (sw)base[rt];
                         res.u32[1] = (sw)base[rs] % (sw)base[rt];
                     }

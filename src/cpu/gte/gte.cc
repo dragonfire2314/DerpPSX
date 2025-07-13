@@ -2,26 +2,49 @@
 
 void GTE::execCommand(uw command)
 {
+    flag.reg = 0;
     ub opcode = command & 0x3F;
+    sf = (command & 0x80000) >> 19;
+    lm = (command & 0x400) >> 10;
+
+    // static int count = 0;
+    // if (count == 1308) int c = getchar();
+
+    // fprintf(stderr, "count:%i\n", count);
+    // fprintf(stderr, "cmd:%i\n", opcode);
+
     switch(opcode)
     {
-    // case 0x06:
-    //     NCLIP(command);
-    //     break;
-    // case 0x13:
-    //     NCDS(command);
-    //     break;
+    case 0x06:
+        NCLIP(command);
+        break;
+    case 0x13:
+        NCDS(command);
+        break;
+    case 0x2d:
+        AVSZ3();
+        break;
     case 0x30:
-        // RTPT(command);
+        RTPT(command);
         break;
     default:
         printf("GTE command not found: %x, opcode: %x\n", command, opcode);
-        system("PAUSE");
+        // int c = getchar();;
+        exit(0);
         break;
     }
 
+    // count++;
+
+    // if (count == 2500) 
+    // {
+    //     int c = getchar();
+    // }
+
+    // fprintf(stderr, "flag:%x\n", flag.reg);
+
     // printf("GTE command: %x, opcode: %x\n", command, opcode);
-    // system("PAUSE");
+    // int c = getchar();;
 }
 
 uw GTE::read(ub reg)
@@ -85,6 +108,9 @@ uw GTE::read(ub reg)
     case 8:
         data.reg = IR0;
         break;
+    case 7:
+        data.low = OTZ;
+        break;
     //IR_vetor
     case 9:
         data.reg = IR_ARR[1];
@@ -146,18 +172,20 @@ uw GTE::read(ub reg)
         data.reg = MAC0;
         break;
     case 25:
-        // data.reg = MAC_ARR[0];
+        data.reg = MAC_ARR[0];
         break;
     case 26:
-        // data.reg = MAC_ARR[1];
+        data.reg = MAC_ARR[1];
         break;
     case 27:
-        // data.reg = MAC_ARR[2];
+        data.reg = MAC_ARR[2];
         break;
-    case 28: //TODO - saturate these to 0 - 0x1F
+    case 28: 
         // data.red = IR1 / 0x80;
         // data.green = IR2 / 0x80;
         // data.blue = IR3 / 0x80;
+        fprintf(stderr, "read IRGB\n");
+        getchar();
         break;
     case 30:
         data.reg = LZCS;
@@ -285,11 +313,13 @@ uw GTE::read(ub reg)
         break;
     default:
         printf("GTE read, reg not found: %i\n", reg);
-        system("PAUSE");
+        int c = getchar();
         break;
     }
 
     // printf("GTE read: %i, data: %x\n", reg, data.reg);
+        // int c = getchar();
+
 
     return data.reg;
 }
@@ -362,13 +392,13 @@ void GTE::write(ub reg, uw _data)
         break;
     //IR_vetor
     case 9:
-        // IR1 = data.reg;
+        IR_ARR[1] = data.reg;
         break;
     case 10:
-        // IR2 = data.reg;
+        IR_ARR[2] = data.reg;
         break;
     case 11:
-        // IR3 = data.reg;
+        IR_ARR[3] = data.reg;
         break;
     //screenCoords
     case 12:
@@ -423,30 +453,38 @@ void GTE::write(ub reg, uw _data)
         MAC0 = data.reg;
         break;
     case 25:
-        MAC_ARR[0] = data.reg;
-        break;
-    case 26:
         MAC_ARR[1] = data.reg;
         break;
-    case 27:
+    case 26:
         MAC_ARR[2] = data.reg;
         break;
+    case 27:
+        MAC_ARR[3] = data.reg;
+        break;
     case 28:
-        // IR1 = data.red * 0x80;
-        // IR2 = data.green * 0x80;
-        // IR3 = data.blue * 0x80;
+        IR_ARR[1] = data.red * 0x80;
+        IR_ARR[2] = data.green * 0x80;
+        IR_ARR[3] = data.blue * 0x80;
+        break;
+    case 29:
         break;
     case 30:
         LZCS = data.reg;
+        break;
+    case 31:
         break;
     //rotationMatrix
     case 32:
         rotationMatrix.M11 = data.low;
         rotationMatrix.M12 = data.high;
+        // fprintf(stderr, "rotationMatrix.M11: %x\n", data.low);
+        // fprintf(stderr, "rotationMatrix.M12: %x\n", data.high);
         break;
     case 33:
         rotationMatrix.M13 = data.low;
         rotationMatrix.M21 = data.high;
+        // fprintf(stderr, "rotationMatrix.M13: %x\n", data.low);
+        // fprintf(stderr, "rotationMatrix.M21: %x\n", data.high);
         break;
     case 34:
         rotationMatrix.M22 = data.low;
@@ -553,9 +591,11 @@ void GTE::write(ub reg, uw _data)
     case 62:
         ZSF4 = data.reg;
         break;
+    case 63:
+        break;
     default:
         printf("GTE write, reg not found: %i, data: %x\n", reg, data.reg);
-        system("PAUSE");
+        int c = getchar();;
         break;
     }
 

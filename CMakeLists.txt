@@ -13,6 +13,8 @@ set( GLFW_BUILD_DOCS OFF CACHE BOOL  "GLFW lib only" )
 set( GLFW_INSTALL OFF CACHE BOOL  "GLFW lib only" )
 add_subdirectory( glfw )
 
+SET(CMAKE_CXX_FLAGS "-g")
+
 # if(MSVC)
 #     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:mainCRTStartup")
 # endif()
@@ -23,9 +25,11 @@ add_executable(DerpPSX
     src/main.cpp
     src/mem.cpp
     src/app.cpp
+    src/configuration.cc
     src/gui.cpp
     src/logging.cpp
-    src/R3000A.cpp
+    src/cpu/cpu.cc
+    src/cpu/instructions.cc
     src/io_controller.cpp
     src/dma.cpp
     src/gpu.cpp

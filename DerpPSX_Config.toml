@@ -1,0 +1,9 @@
+[app]
+    screenWidth=1280
+    screenHeight=720
+    windowName="DerpPSX"
+
+[bios]
+    location="ps1Roms/SCPH1001.BIN"
+    # location="/home/tanner/pcsx-redux/src/mips/openbios/openbios.bin"
+    # 

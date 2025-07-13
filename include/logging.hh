@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include <global.h>
+#include <global.hh>
 
 namespace LOG 
 {

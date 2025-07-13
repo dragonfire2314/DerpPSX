@@ -1,7 +1,7 @@
 #ifndef MATH_hpp 
 #define MATH_hpp
 
-#include <global.h>
+#include <global.hh>
 
 template <typename T>
 struct Vector3

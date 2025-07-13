@@ -1,12 +1,13 @@
-#include <cdrom.h>
+#include <cdrom.hh>
 
-#include <core.h>
+#include <core.hh>
 
 
 
 void CDROM::init()
 {
-    disk.openDisk("/home/tanner/DerpPSX/ps1Roms/DDR/DDR.bin");
+    // disk.openDisk("/home/tanner/DerpPSX/ps1Roms/DDR/DDR.bin");
+    disk.openDisk("/home/tanner/DerpPSX/ps1Roms/gex/gex1.bin");
 }
 
 void CDROM::step(uw cycles)
@@ -230,6 +231,9 @@ void CDROM::doCommand()
     case 0x0a:
         Command_Init();
         break;
+    case 0x0c:
+        Command_DeMute();
+        break;
     case 0x0e:
         Command_SetMode();
         break;
@@ -247,11 +251,11 @@ void CDROM::doCommand()
         break;
     default:
         printf("CDROM command not found: %x\n", command);
-        system("PAUSE");
+        int c = getchar();;
         break;
     }
 
-    // system("PAUSE");
+    // int c = getchar();;
 }
 
 ub fromBCD(ub bcd) {
@@ -368,6 +372,12 @@ void CDROM::Command_SeekL()
     disk_status.seek = 0;
 
     addInterrupt(2);
+    setIntRespose(disk_status.reg);
+}
+
+void CDROM::Command_DeMute()
+{
+    addInterrupt(3);
     setIntRespose(disk_status.reg);
 }
 

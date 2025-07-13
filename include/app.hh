@@ -1,28 +1,23 @@
 #ifndef APP_hpp 
 #define APP_hpp
 
-#include "window.h"
-#include <renderer/OpenGL/opengl.h>
-#include <core.h>
-#include <gui.h>
+#include "window.hh"
+#include <renderer/OpenGL/opengl.hh>
+#include <core.hh>
+#include <gui.hh>
 #include <runner/runner.hh>
-#include <runner/debug/debugger.h>
+#include <runner/debug/debugger.hh>
+#include <configuration.hh>
 
 #include <string>
-
-struct Application_Config 
-{
-    int width;
-    int height;
-    std::string windowName;
-};
 
 class Application 
 {
 private:
-    Application_Config config;
     GLFWwindow* window;
     RenderAPI* renderer;
+
+    Configuration configuration;
 
     GUI* debugger;
     Core core;
@@ -31,9 +26,13 @@ private:
     void imgui_init();
     void glfw_init();
 
+    void loadConfiguration();
+
 public:
-    Application(Application_Config &_config);
+    Application();
     void Run();
+
+    std::string getBiosFile();
 
     friend class Core;
 };

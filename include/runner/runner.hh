@@ -1,7 +1,7 @@
 #ifndef RUNNER_hpp 
 #define RUNNER_hpp
 
-#include <global.h>
+#include <global.hh>
 
 class Core;
 

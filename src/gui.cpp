@@ -1,6 +1,6 @@
-#include "gui.h"
+#include "gui.hh"
 
-#include <logging.h>
+#include <logging.hh>
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -8,7 +8,7 @@
 
 #include <GL/glew.h>
 
-#include <core.h>
+#include <core.hh>
 
 void GUI::newFrame()
 {

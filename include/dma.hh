@@ -1,7 +1,7 @@
 #ifndef DMA_HPP
 #define DMA_HPP
 
-#include <global.h>
+#include <global.hh>
 
 class Core;
 

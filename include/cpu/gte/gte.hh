@@ -1,7 +1,7 @@
 #ifndef GTE_hpp 
 #define GTE_hpp
 
-#include <global.h>
+#include <global.hh>
 #include <cpu/gte/math.hh>
 
 class GTE 
@@ -10,15 +10,15 @@ private:
     //Data Registers
     Vector3<sh> vectors[3];
     ub r, g, b, c;
-    uh OTZ; //Average z
-    uh IR0; //16bit Accumulator (Interpolate)
-    uh IR_ARR[4];
+    sh OTZ; //Average z
+    sh IR0; //16bit Accumulator (Interpolate)
+    sh IR_ARR[4];
     Vector3<sh> ScreenXY[3];
     uh ScreenZ[4];
     Vector3<ub> ColorFIFO[4];
 
     sw MAC0;
-    int64_t MAC_ARR[4];
+    int32_t MAC_ARR[4];
     uh IRGB;
     uh ORGB;
     sw LZCS;
@@ -37,6 +37,31 @@ private:
     sw DQB;
     sh ZSF3;
     sh ZSF4;
+
+    enum FLAG_BITS 
+    {
+        MAC1_OVERFLOW_FLAG = 0x40000000,
+        MAC2_OVERFLOW_FLAG = 0x20000000,
+        MAC3_OVERFLOW_FLAG = 0x10000000,
+        MAC1_UNDERFLOW_FLAG = 0x8000000,
+        MAC2_UNDERFLOW_FLAG = 0x4000000,
+        MAC3_UNDERFLOW_FLAG = 0x2000000,
+
+        IR1_SATURATED = 0x1000000,
+        IR2_SATURATED = 0x800000,
+        IR3_SATURATED = 0x400000,
+
+        COLOR_R_FIFO_SATURATED = 0x200000,
+        COLOR_G_FIFO_SATURATED = 0x100000,
+        COLOR_B_FIFO_SATURATED = 0x80000,
+
+        OTZ_SATURATED = 0x40000,
+
+        MAC0_OVERFLOW_FLAG = 0x10000,
+        MAC0_UNDERFLOW_FLAG = 0x8000,
+
+        IR0_SATURATED = 0x1000,
+    };
 
     union FLAG
     {
@@ -69,43 +94,24 @@ private:
 
     FLAG flag;
     
-    // union highLow
-    // {
-    //     struct
-    //     {
-    //         ub b_0;
-    //         ub b_1;
-    //         ub b_2;
-    //         ub b_3;
-    //     };
-    //     struct
-    //     {
-    //         uh low;
-    //         uh high;
-    //     };
-    //     uw reg;
-    // };
+    bool sf;
+    bool lm;
 
     void pushZ(uh newZ);
     void pushXY(uh newX, uh newY);
     void pushColor(Vector3<ub> new_color);
-
-    template<int T>
-    int64_t checkMacOverflow(int64_t val);
-
-    template<int T>
-    int32_t setIR(int32_t val);
+    void pushColor(int32_t r, int32_t g, int32_t b);
 
     void NCLIP(uw command);
     void NCDS(uw command);
     void MVMVA(uw command);
-    void RTPS(Vector3<sh> vec, ub sf);
+    void RTPS(Vector3<sh> vec);
     void RTPT(uw command);
+    void AVSZ3();
     
-    void setMAC(int index, int64_t value);
-    void setIR(int index, sh value);
-
-    void matrixMultVectorAddVector(Vector3<sh> vecAdd, Vector3<sh> vecMult, Matrix3x3 &mat, ub sf);
+    int64_t setMAC(int index, int64_t value);
+    int64_t setMAC0(int64_t value);
+    void setIR(int index, int64_t value, bool lm = false);
 public:
     uw read(ub reg);
     void write(ub reg, uw _data);

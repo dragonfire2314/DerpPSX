@@ -1,7 +1,7 @@
 #ifndef MEM_hpp 
 #define MEM_hpp
 
-#include <global.h>
+#include <global.hh>
 
 class Core;
 

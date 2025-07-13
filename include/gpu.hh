@@ -1,7 +1,7 @@
 #ifndef GPU_HPP
 #define GPU_HPP
 
-#include <global.h>
+#include <global.hh>
 #include <stdlib.h>     /* srand, rand */
 #include <fstream>
 #include <iomanip>
@@ -348,7 +348,7 @@ public:
 			if (v4.pos.x == 0 && v4.pos.y == 0) 
 			{
 				printf("Wrong create TYriangle/s functions used?\n");
-				system("PAUSE");
+				int c = getchar();;
 			}
 			tris.push_back(Triangle(v1, v2, v3, clutXloc, clutYloc, texPageX, texPageY));
 			tris.push_back(Triangle(v2, v4, v3, clutXloc, clutYloc, texPageX, texPageY));
@@ -452,6 +452,8 @@ public:
 		delete state;
 		state = new_state;
 	}
+
+	uint32_t GPU_READ_RESPONSE = 0;
 
 	// enum class CommandID
 	// {

@@ -1,7 +1,7 @@
 #ifndef IO_CONTROLLER_HPP
 #define IO_CONTROLLER_HPP
 
-#include <global.h>
+#include <global.hh>
 
 class Core;
 

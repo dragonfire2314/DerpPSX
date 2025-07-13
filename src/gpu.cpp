@@ -1,325 +1,9 @@
-#include <gpu.h>
+#include <gpu.hh>
 
-#include <logging.h>
-#include <core.h>
+#include <logging.hh>
+#include <core.hh>
 
 GPU::CommandState* GPU::state;
-
-// void GPU::CopyRectangle_CPU_to_VRAM(uw* command, uw size, bool isDMA)
-// {
-// 	// LOG::fatal(LOG::GPU, "CopyRectangle_CPU_to_VRAM called, im not sure this code works");
-
-// 	static uh destX;
-// 	static uh destY;
-// 	static uh width;
-// 	static uh height;
-// 	static uw xPos;
-// 	static uw yPos;
-// 	static uw num_pixels;
-// 	static uw* tran_data;
-// 	static ub* outBuffer;
-
-// 	if (!isDMA) {
-// 		destX = (command[0] & 0xFFFF);
-// 		destY = (command[0] & 0xFFFF0000) >> 16;
-// 		//printf("THIS ONE: %x\n", command);
-
-// 		width = (command[1] & 0xFFFF);
-// 		height = (command[1] & 0xFFFF0000) >> 16;
-// 		num_pixels = width * height;
-// 		tran_data = new uw[num_pixels];
-// 		outBuffer = new ub[num_pixels * 2];
-// 		//printf("x: %u |y: %u |W: %u |H: %u\n", destX, destY, width, height);
-// 		//system("PAUSe");
-// 		//printf("%x\n", command);
-
-// 		// tran_data[count - 2] = command[2];
-// 	}
-// 	else 
-// 	{
-// 		tran_data[0] = command[0];
-
-// 		//Exit condition
-// 		if ((width * height / 2) == (2)) {
-
-// 			uh* src_ptr = (uh*)(tran_data);
-// 			uh mask_and = 0;
-// 			uh mask_or = 0;
-
-// 			for (uw row = 0; row < height;)
-// 			{
-// 				uh* dst_row_ptr = &VRAM[((destY + row++) % 512) * 1024];
-// 				for (uw col = 0; col < width;)
-// 				{
-// 					// TODO: Handle unaligned reads...
-// 					uh* pixel_ptr = &dst_row_ptr[(destX + col++) % 1024];
-// 					if (((*pixel_ptr) & mask_and) == 0)
-// 						*pixel_ptr = *(src_ptr++) | mask_or;
-// 				}
-// 			}
-
-// 			isCommand = false;
-// 			xPos = 0;
-// 			yPos = 0;
-// 		}
-// 	}
-// }
-
-// //  DRAW FUNCTIONS 
-
-// void GPU::Draw_Monocrome_Quad(uw* command, uw size)
-// {
-// 	GPU_Vert v1, v2, v3, v4;
-
-// 	v1.setRGB(command[0]);
-// 	v2.setRGB(command[0]);
-// 	v3.setRGB(command[0]);
-// 	v4.setRGB(command[0]);
-
-// 	v1.setXY(PS_Width, PS_Height, command[1]);
-// 	v2.setXY(PS_Width, PS_Height, command[2]);
-// 	v3.setXY(PS_Width, PS_Height, command[3]);
-// 	v4.setXY(PS_Width, PS_Height, command[4]);
-
-// 	GPU_Polygon polygon;
-// 	polygon.verts.push_back(std::move(v1));
-// 	polygon.verts.push_back(std::move(v2));
-// 	polygon.verts.push_back(std::move(v3));
-// 	polygon.verts.push_back(std::move(v4));
-
-// 	//Send to renderer
-// 	core->getRenderer()->addPolygon(polygon);
-// }
-
-// void GPU::Draw_Shaded_Quad(uw* command, uw size)
-// {
-// 	GPU_Vert v1, v2, v3, v4;
-
-// 	v1.setRGB(command[0]);
-// 	v1.setXY(PS_Width, PS_Height, command[1]);
-
-// 	v2.setRGB(command[2]);
-// 	v2.setXY(PS_Width, PS_Height, command[3]);
-
-// 	v3.setRGB(command[4]);
-// 	v3.setXY(PS_Width, PS_Height, command[5]);
-	
-// 	v4.setRGB(command[6]);
-// 	v4.setXY(PS_Width, PS_Height, command[7]);
-
-// 	GPU_Polygon polygon;
-// 	polygon.verts.push_back(std::move(v1));
-// 	polygon.verts.push_back(std::move(v2));
-// 	polygon.verts.push_back(std::move(v3));
-// 	polygon.verts.push_back(std::move(v4));
-
-// 	//Send to renderer
-// 	core->getRenderer()->addPolygon(polygon);
-// }
-
-// void GPU::Draw_Shaded_Triangle(uw* command, uw size)
-// {
-// 	GPU_Vert v1, v2, v3;
-
-// 	v1.setRGB(command[0]);
-// 	v1.setXY(PS_Width, PS_Height, command[1]);
-
-// 	v2.setRGB(command[2]);
-// 	v2.setXY(PS_Width, PS_Height, command[3]);
-
-// 	v3.setRGB(command[4]);
-// 	v3.setXY(PS_Width, PS_Height, command[5]);
-
-// 	GPU_Polygon polygon;
-// 	polygon.verts.push_back(std::move(v1));
-// 	polygon.verts.push_back(std::move(v2));
-// 	polygon.verts.push_back(std::move(v3));
-
-// 	//Send to renderer
-// 	core->getRenderer()->addPolygon(polygon);
-// }
-
-// void GPU::Draw_Textured_Quad(uw* command, uw size)
-// {
-// 	GPU_Vert v1, v2, v3, v4;
-
-// 	v1.setRGB(command[0]);
-// 	v2.setRGB(command[0]);
-// 	v3.setRGB(command[0]);
-// 	v4.setRGB(command[0]);
-
-// 	v1.setXY(PS_Width, PS_Height, command[1]);
-// 	v2.setXY(PS_Width, PS_Height, command[3]);
-// 	v3.setXY(PS_Width, PS_Height, command[5]);
-// 	v4.setXY(PS_Width, PS_Height, command[7]);
-
-// 	GPU_Polygon polygon;
-// 	polygon.verts.push_back(std::move(v1));
-// 	polygon.verts.push_back(std::move(v2));
-// 	polygon.verts.push_back(std::move(v3));
-// 	polygon.verts.push_back(std::move(v4));
-
-// 	//Send to renderer
-// 	core->getRenderer()->addPolygon(polygon);
-// }
-
-// void GPU::Draw_Textured_Quad(uw command)
-// {
-// 	static uw count = 0;
-
-// 	static gpu_vec2 v1, v2, v3, v4;
-
-// 	static uh palette;
-// 	static uh page;
-
-// 	if (count == 0)
-// 	{
-// 		//None
-// 		v1.setRGB(0x00000000);
-// 		v2.setRGB(0x00000000);
-// 		v3.setRGB(0x00000000);
-// 		v4.setRGB(0x00000000);
-// 	}
-// 	else if (count == 1)
-// 	{
-// 		//v1
-// 		v1.setXY(PS_Width, PS_Height, command);
-// 	}
-// 	else if (count == 2)
-// 	{
-// 		palette = (command & 0xFFFF0000) >> 16;
-// 		v1.setTexCoord(command);
-// 	}
-// 	else if (count == 3)
-// 	{
-// 		//v1
-// 		v2.setXY(PS_Width, PS_Height, command);
-// 	}
-// 	else if (count == 4)
-// 	{
-// 		page = (command & 0xFFFF0000) >> 16;
-// 		v2.setTexCoord(command);
-// 	}
-// 	else if (count == 5)
-// 	{
-// 		//v1
-// 		v3.setXY(PS_Width, PS_Height, command);
-// 	}
-// 	else if (count == 6)
-// 	{
-// 		v3.setTexCoord(command);
-// 	}
-// 	else if (count == 7)
-// 	{
-// 		//v4
-// 		v4.setXY(PS_Width, PS_Height, command);
-// 	}
-// 	else if (count == 8)
-// 	{
-// 		v4.setTexCoord(command);
-
-// 		//Set up render
-// 		GLfloat temp[18] = {
-// 			v1.f_x, (-1) * v1.f_y, 0.0f,
-// 			v2.f_x, (-1) * v2.f_y, 0.0f,
-// 			v3.f_x, (-1) * v3.f_y, 0.0f,
-
-// 			v2.f_x, (-1) * v2.f_y, 0.0f,
-// 			v4.f_x, (-1) * v4.f_y, 0.0f,
-// 			v3.f_x, (-1) * v3.f_y, 0.0f
-// 		};
-
-// 		GLfloat g_UV_buffer_data[] = {
-// 			v1.texCoordX, v1.texCoordY,  // Upper Left
-// 			v2.texCoordX, v2.texCoordY,  // Upper Right
-// 			v3.texCoordX, v3.texCoordY,   // Lower left
-
-// 			v2.texCoordX, v2.texCoordY,
-// 			v4.texCoordX, v4.texCoordY,
-// 			v3.texCoordX, v3.texCoordY
-// 		};
-
-// 		memcpy(objects[objects_index].g_uv_buffer_data, g_UV_buffer_data, sizeof(float) * 12);
-// 		memcpy(objects[objects_index].g_vertex_buffer_data, temp, sizeof(float) * 18);
-
-// 		//Make texture
-// 		objects[objects_index].textureData = new ub[256 * 256 * 4];
-// 		//Get clut address
-// 		uh clutXloc = (palette & 0x3F) * 16;
-// 		uh clutYloc = (palette & 0x7FC0) >> 6;
-
-// 		uh texPageX = (page & 0xF) * 64;
-// 		uh texPageY = (page & 0x10) >> 4;
-
-// 		uw countX = 0;
-// 		uw countY = 0;
-
-// 		uh* clut = (VRAM + (clutYloc * 1024) + (clutXloc));
-
-// 		//Copy 256 * 256 VRAM Block
-// 		//memset(objects[objects_index].textureData, 255, sizeof(ub) * 256 * 256 * 3);
-// 		const uh mask_and = 0;
-// 		const uh mask_or = 0;
-
-// 		uw src_x = texPageX;
-// 		uw src_y = texPageY;
-// 		uw dst_x = 0;
-// 		uw dst_y = 0;
-// 		uw width = 64;
-// 		uw height = 64;
-
-// 		for (uw y = 0; y < 256; y++) 
-// 		{
-// 			for (uw x = 0; x < 64; x++)
-// 			{
-// 				//Add texpageY to y
-// 				uh pixel = VRAM[(y * 1024) + x + texPageX];
-// 				ub p1 = (pixel & 0xF);
-// 				ub p2 = (pixel & 0xF0) >> 4;
-// 				ub p3 = (pixel & 0xF00) >> 8;
-// 				ub p4 = (pixel & 0xF000) >> 12;
-
-// 				uw index = ((y * 1024) + (x * 16));
-
-// 				objects[objects_index].textureData[index + 3] = ((clut[p1] & 0x1F)) * 8;
-// 				objects[objects_index].textureData[index + 2] = ((clut[p1] & 0x3E0) >> 5) * 8;
-// 				objects[objects_index].textureData[index + 1] = ((clut[p1] & 0x7C00) >> 10) * 8;
-// 				if (clut[p1] == 0x0) objects[objects_index].textureData[index] = 0; //Transparent
-// 				else objects[objects_index].textureData[index] = 255; //Opeque
-				
-														 
-// 				objects[objects_index].textureData[index + 7] = ((clut[p2] & 0x1F)) * 8;
-// 				objects[objects_index].textureData[index + 6] = ((clut[p2] & 0x3E0) >> 5) * 8;
-// 				objects[objects_index].textureData[index + 5] = ((clut[p2] & 0x7C00) >> 10) * 8;
-// 				if (clut[p2] == 0x0) objects[objects_index].textureData[index + 4] = 0; //Transparent
-// 				else objects[objects_index].textureData[index + 4] = 255; //Opeque
-														 
-// 				objects[objects_index].textureData[index + 11] = ((clut[p3] & 0x1F)) * 8;
-// 				objects[objects_index].textureData[index + 10] = ((clut[p3] & 0x3E0) >> 5) * 8;
-// 				objects[objects_index].textureData[index + 9] = ((clut[p3] & 0x7C00) >> 10) * 8;
-// 				if (clut[p3] == 0x0) objects[objects_index].textureData[index + 8] = 0; //Transparent
-// 				else objects[objects_index].textureData[index + 8] = 255; //Opeque
-														 
-// 				objects[objects_index].textureData[index + 15] = ((clut[p4] & 0x1F)) * 8;
-// 				objects[objects_index].textureData[index + 14] = ((clut[p4] & 0x3E0) >> 5) * 8;
-// 				objects[objects_index].textureData[index + 13] = ((clut[p4] & 0x7C00) >> 10) * 8;
-// 				if (clut[p4] == 0x0) objects[objects_index].textureData[index + 12] = 0; //Transparent
-// 				else objects[objects_index].textureData[index + 12] = 255; //Opeque
-// 			}
-// 		}
-
-
-// 		objects[objects_index].type = QUAD;
-// 		objects[objects_index].color_type = TEXTURED;
-
-// 		objects_index++;
-
-// 		count = -1;
-// 		isCommand = false;
-// 	}
-// 	count++;
-// }
-
 
 int GPU::get_horizontal_timings()
 {
@@ -368,7 +52,7 @@ void GPU::gpu_store_frame(void *image)
 	if (status.displayEnable == 1) //Display off
 	{
 		printf("display disabbled\n");
-		system("PAUSE");
+		int c = getchar();;
 		return;
 	}
 
@@ -376,14 +60,14 @@ void GPU::gpu_store_frame(void *image)
 	// {
 	// 	printf("drawingAreaBotRightX: %i, drawingAreaTopLeftX: %i, PS_Width: %i\n", drawingAreaBotRightX, drawingAreaTopLeftX, PS_Width);
 	// 	printf("The day I feared has come, the GPU is using a drawing window that is differnt than the resolution X\n");
-	// 	system("PAUSE");
+	// 	int c = getchar();;
 	// }
 
 	// if (drawingAreaBotRightY - drawingAreaTopLeftY + 1 != PS_Height) 
 	// {
 	// 	printf("drawingAreaBotRightY: %i, drawingAreaTopLeftY: %i, PS_Height: %i\n", drawingAreaBotRightY, drawingAreaTopLeftY, PS_Height);
 	// 	printf("The day I feared has come, the GPU is using a drawing window that is differnt than the resolution Y\n");
-	// 	system("PAUSE");
+	// 	int c = getchar();;
 	// }
 
 	//Copy image to VRAM using drawingAreaBotRightX, Y and drawingAreaBotRightX, Y
@@ -415,6 +99,7 @@ void GPU::Idle::dispatch(uw data, GPU* gpu)
 	uw command_byte = ((data) & 0xFF000000) >> 24;
 
 	CommandState* new_state = nullptr;
+	int c;
 
 	switch (command_byte)
 	{
@@ -448,7 +133,7 @@ void GPU::Idle::dispatch(uw data, GPU* gpu)
 		new_state = new GPU::Draw_Monochrome_Rectangle_Fixed();
 		break;
 	case 0xa0:
-		// printf("[GPU] 0xA0 Copy Rectangle\n");
+		printf("[GPU] 0xA0 Copy Rectangle\n");
 		// commandState = CommandState::COPY_RECTANGLE_CPU_TO_VRAM;
 		new_state = new GPU::CopyRectangle_CPU_to_VRAM();
 		break;
@@ -464,13 +149,13 @@ void GPU::Idle::dispatch(uw data, GPU* gpu)
 		// if (gpu->status.semiTranparent != gpu->texPage.semiTranparent) 
 		// {
 		// 	printf("semiTranparent\n");
-		// 	system("PAUSE");
+		// 	int c = getchar();;
 		// }
 		gpu->status.semiTranparent = gpu->texPage.semiTranparent;
 		// if (gpu->status.texPageColor != gpu->texPage.texPageColor) 
 		// {
 		// 	printf("HHMMMM\n");
-		// 	system("PAUSE");
+		// 	int c = getchar();;
 		// }
 		gpu->status.texPageColor = gpu->texPage.texPageColor;
 		gpu->status.dither = gpu->texPage.dither;
@@ -501,7 +186,7 @@ void GPU::Idle::dispatch(uw data, GPU* gpu)
 		break;
 	default:
 		printf("[GPU COMMAND] Command not found:%x\n", (data));
-		system("PAUSE");
+		int c = getchar();;
 		// for (uw i = 0; i < size; i++) 
 		// {
 		// 	printf("%x ", (command[i]));
@@ -837,7 +522,7 @@ void GPU::CopyRectangle_CPU_to_VRAM::dispatch(uw data, GPU* gpu)
 
 	
 	//printf("x: %u |y: %u |W: %u |H: %u\n", destX, destY, width, height);
-	//system("PAUSe");
+	//int c = getchar();;
 	//printf("%x\n", command);
 
 	// tran_data[count - 2] = command[2];
@@ -899,7 +584,7 @@ void GPU::gpu0Command(uw* command, uw size)
 
 void GPU::gpu1Command(uw command)
 {
-	//std::cout << "[GPU1] Command: " << std::hex << command << std::endl;
+	// std::cout << "[GPU1] Command: " << std::hex << command << std::endl;
 
 	switch ((command & 0xFF000000) >> 24)
 	{
@@ -933,8 +618,22 @@ void GPU::gpu1Command(uw command)
 	case 0x04:
 		status.DMA_dir = command & 0x3;
 		break;
+	case 0x10:
+		switch(command & 0xFFFFFF)
+		{
+		case 0x07:
+			GPU_READ_RESPONSE = 0;
+			break;
+		default:
+			GPU_READ_RESPONSE = 0;
+			fprintf(stderr, "GP1 command 10 sub command not found: %x", command & 0xFFFFFF);
+			int c = getchar();
+			break;
+		}
+		break;
 	default:
-		system("PAUSE");
+		fprintf(stderr, "GP1 command not found: %x", (command & 0xFF000000) >> 24);
+		int c = getchar();
 	}
 
 	//Set screen resolution
@@ -953,5 +652,6 @@ void GPU::gpu1Command(uw command)
 
 uh GPU::gpuRead()
 {
+	// return 0;
 	return state->read(this);
 }

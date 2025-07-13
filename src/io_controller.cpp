@@ -1,8 +1,8 @@
-#include <io_controller.h>
+#include <io_controller.hh>
 
-#include <gpu.h>
-#include <core.h>
-#include <logging.h>
+#include <gpu.hh>
+#include <core.hh>
+#include <logging.hh>
 
 void IO_Controller::init()
 {
@@ -22,7 +22,7 @@ uw IO_Controller::read(uw address)
 	{
 		// std::cout << "[DMA] : " << std::hex << address << std::endl;
 
-		LOG::debug(LOG::SystemLocation::DMA, "read: %x", address);
+		// LOG::debug(LOG::SystemLocation::DMA, "read: %x", address);
 		return core->getDMA()->dmaRead(address);
 	}
 
@@ -33,7 +33,7 @@ uw IO_Controller::read(uw address)
 		return core->getCDROM()->read(address);
 		// return cd.read(address);
 		//cd.load_PXS_EXE();
-		//system("PAUSE");
+		//int c = getchar();;
 
 	}
 
@@ -48,7 +48,7 @@ uw IO_Controller::read(uw address)
 	case 0x1F8010F0: //Read DMA
 		// std::cout << "[DMA] control read: " << std::hex << address << std::endl;
 
-		LOG::debug(LOG::SystemLocation::DMA, "control read: %x", address);
+		// LOG::debug(LOG::SystemLocation::DMA, "control read: %x", address);
 		return core->getDMA()->readControl();
 		break;
 	case 0x1F801070: //Interupt status
@@ -71,7 +71,7 @@ uw IO_Controller::read(uw address)
 		return 0;
 		break;
 	case 0x1F801810: //GPU READ
-		//std::cout << "[GP0] read: " << std::hex << address << std::endl;
+		// std::cout << "[GP0] read: " << std::hex << address << std::endl;
 		return core->getGPU()->gpuRead();
 		return 0;
 		break;
@@ -109,7 +109,7 @@ void IO_Controller::write(uw data, uw address)
 		core->getCDROM()->write(address, data);
 		//cpu.pc = 0xbfc069a0;
 		// cd.write(address, data);
-		//system("PAUSE");
+		//int c = getchar();;
 	}
 
 	//Catch Timer
@@ -143,7 +143,7 @@ void IO_Controller::write(uw data, uw address)
 		core->getGPU()->gpu0Command(data);
 		break;
 	case 0x1f801814: // GPU Send GP1 command
-		//std::cout << "[GP1] send commande: " << std::hex << " data: " << data << std::endl;
+		// std::cout << "[GP1] send commande: " << std::hex << " data: " << data << std::endl;
 		// LOG::debug(LOG::SystemLocation::GPU, "GP1: send command: data: %x", data);
 		core->getGPU()->gpu1Command(data);
 		break;
@@ -160,7 +160,7 @@ void IO_Controller::write(uw data, uw address)
 		printf("[Trace] %x\n", data);
 		// printf("[Trace] PC: %x\n", core->getCPU()->pc);
 		LOG::debug(LOG::SystemLocation::APP, "[Trace] %x", data);
-		// system("PAUSE");
+		// int c = getchar();;
 	}
 }
 
