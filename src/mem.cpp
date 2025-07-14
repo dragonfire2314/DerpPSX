@@ -22,7 +22,7 @@ template <class T>
 void CstrMem::write(uw addr, T data) {
     if ((addr & MEM_MASK) < MEM_BOUNDS_RAM) { // RAM
         // A shorter method to allow mem write
-        if (!(core->getCPU()->copr[12] & 0x10000)) {
+        if (!(core->getCPU()->status.reg & 0x10000)) {
             accessMem(ram, T) = data;
         }
         return;

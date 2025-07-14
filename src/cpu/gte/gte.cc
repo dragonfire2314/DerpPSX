@@ -30,7 +30,7 @@ void GTE::execCommand(uw command)
     default:
         printf("GTE command not found: %x, opcode: %x\n", command, opcode);
         // int c = getchar();;
-        exit(0);
+        // exit(0);
         break;
     }
 
@@ -185,7 +185,7 @@ uw GTE::read(ub reg)
         // data.green = IR2 / 0x80;
         // data.blue = IR3 / 0x80;
         fprintf(stderr, "read IRGB\n");
-        getchar();
+        // getchar();
         break;
     case 30:
         data.reg = LZCS;
@@ -313,7 +313,7 @@ uw GTE::read(ub reg)
         break;
     default:
         printf("GTE read, reg not found: %i\n", reg);
-        int c = getchar();
+        // int c = getchar();
         break;
     }
 
@@ -595,7 +595,7 @@ void GTE::write(ub reg, uw _data)
         break;
     default:
         printf("GTE write, reg not found: %i, data: %x\n", reg, data.reg);
-        int c = getchar();;
+        // int c = getchar();;
         break;
     }
 

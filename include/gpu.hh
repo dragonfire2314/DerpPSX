@@ -234,103 +234,13 @@ public:
 	enum POLY_TYPE { TRIANGLE, QUAD };
 	enum COLOR_TYPE { TEXTURED, SOLID };
 
-	// GLFWwindow* window;
 
 	uw PS_Width = 640;
 	uw PS_Height = 240;
 
-	// GLuint SolidShader;
-	// GLuint TextureShader;
-
-	// struct drawable {
-	// 	GLfloat g_vertex_buffer_data[18];
-	// 	GLfloat g_color_buffer_data[18];
-	// 	GLfloat g_uv_buffer_data[12];
-	// 	ub *textureData = nullptr;
-
-	// 	GLuint vertexbuffer;
-	// 	GLuint colorbuffer;
-	// 	GLuint UVbuffer;
-	// 	GLuint textureID;
-
-	// 	void setUp() 
-	// 	{
-	// 		if (textureData) {
-	// 			glEnable(GL_BLEND);
-	// 			glDeleteTextures(1, &textureID);
-	// 			glGenTextures(1, &textureID);
-	// 			glBindTexture(GL_TEXTURE_2D, textureID);
-
-	// 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	// 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	// 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 256, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, textureData);
-	// 		}
-	// 		else {
-	// 			glDisable(GL_BLEND);
-	// 		}
-
-	// 		glDeleteBuffers(1, &vertexbuffer);
-
-	// 		glGenBuffers(1, &vertexbuffer);
-	// 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	// 		glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
-
-	// 		glDeleteBuffers(1, &colorbuffer);
-
-	// 		glGenBuffers(1, &colorbuffer);
-	// 		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
-	// 		glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
-
-	// 		glDeleteBuffers(1, &UVbuffer);
-
-	// 		glGenBuffers(1, &UVbuffer);
-	// 		glBindBuffer(GL_ARRAY_BUFFER, UVbuffer);
-	// 		glBufferData(GL_ARRAY_BUFFER, sizeof(g_uv_buffer_data), g_uv_buffer_data, GL_STATIC_DRAW);
-	// 	}
-	// 	void render(GLuint st, GLuint ss)
-	// 	{
-	// 		glEnableVertexAttribArray(0);
-	// 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	// 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-	// 		if (color_type == SOLID) {
-	// 			glUseProgram(ss);
-
-	// 			glEnableVertexAttribArray(1);
-	// 			glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
-	// 			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	// 		}
-	// 		else {
-	// 			glUseProgram(st);
-
-	// 			glEnableVertexAttribArray(1);
-	// 			glBindBuffer(GL_ARRAY_BUFFER, UVbuffer);
-	// 			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	// 		}
-
-	// 		if (type == TRIANGLE) glDrawArrays(GL_TRIANGLES, 0, 3);
-	// 		if (type == QUAD)     glDrawArrays(GL_TRIANGLES, 0, 6);
-	// 		glDisableVertexAttribArray(0);
-	// 		glDisableVertexAttribArray(1);
-
-	// 		if (textureData) delete textureData;
-	// 	}
-	// 	COLOR_TYPE color_type = SOLID;
-	// 	POLY_TYPE type = TRIANGLE;
-	// };
-
-	// drawable objects[1024];
-	// uw objects_index = 0;
-
 	bool isCommand = false;
 	void(GPU::*commandFunc)(uw*, uw);
 
-	
-	// void Draw_Monocrome_Quad(uw* command, uw size);
-	// void Draw_Shaded_Quad(uw* command, uw size);
-	// void Draw_Shaded_Triangle(uw* command, uw size);
-	// void Draw_Textured_Quad(uw* command, uw size);
 
     Core* core;
 
@@ -368,6 +278,14 @@ public:
 			uh texData = (data & 0xFFFF0000) >> 16;
 			texPageX = (texData & 0xF) * 64;
 			texPageY = ((texData & 0x10) >> 4) * 256;
+		}
+		uh truncateColor24to15 (uw color)
+		{
+			// 8-bit 0-255
+			// 5-bit 0-63
+			auto truncate8_5 = [](ub value) { return (ub)(0 + (value - 0) * (63 - 0) / (255 - 0)); };
+
+			return (((truncate8_5((color & 0xFF0000) >> 16)) & 0x7C00) << 10) | (((truncate8_5((color & 0xFF00) >> 8)) & 0x3E0) << 5) | (truncate8_5((color & 0xFF)) & 0x1F);
 		}
 
 		uh clutXloc;
@@ -443,6 +361,12 @@ public:
 		uw* tran_data;
 		ub* outBuffer;
 	};
+
+	class Monochrome_Rectangle_1x1 : public CommandState 
+	{
+		void dispatch(uw data, GPU* gpu);
+	};
+
 
 
 	static CommandState* state;

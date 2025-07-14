@@ -169,6 +169,6 @@ void IO_Controller::IRQ(IRQ_TYPE type)
 	if ((i_mask & type) == type) {
 		// printf("\033[1;36m%s%x\033[0m\n", "IRQ WAS CALLED: ", type);
 		i_stat = i_stat | type;
-		core->getCPU()->copr[13] = core->getCPU()->copr[13] | 0x400;
+		core->getCPU()->cause.reg = core->getCPU()->cause.reg | 0x400;
 	}
 }

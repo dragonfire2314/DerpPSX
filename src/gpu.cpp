@@ -184,6 +184,10 @@ void GPU::Idle::dispatch(uw data, GPU* gpu)
 		gpu->setWhileDrawing = data & 0x1;
 		gpu->checkBeforeDrawing = (data & 0x2) >> 1;
 		break;
+	case 0x68:
+		// printf("[GPU] 0x68 Monochrome Rectangle (1x1)\n");
+		new_state = new GPU::Monochrome_Rectangle_1x1();
+		break;
 	default:
 		printf("[GPU COMMAND] Command not found:%x\n", (data));
 		int c = getchar();;
@@ -520,11 +524,6 @@ void GPU::CopyRectangle_CPU_to_VRAM::dispatch(uw data, GPU* gpu)
 		}
 	}
 
-	
-	//printf("x: %u |y: %u |W: %u |H: %u\n", destX, destY, width, height);
-	//int c = getchar();;
-	//printf("%x\n", command);
-
 	// tran_data[count - 2] = command[2];
 
 	
@@ -554,12 +553,35 @@ void GPU::CopyRectangle_VRAM_TO_CPU::dispatch(uw data, GPU* gpu)
 
 uh GPU::CopyRectangle_VRAM_TO_CPU::read(GPU* gpu)
 {
-	return gpu->VRAM[1024 * sourceY + sourceX];
-
 	//Exit condition
 	if (((width * height / 2) + 1) == pass-2) {
 		GPU::chageState(new Idle());
 	}
+
+	pass++;
+
+	return gpu->VRAM[1024 * sourceY + sourceX];
+}
+
+void GPU::Monochrome_Rectangle_1x1::dispatch(uw data, GPU* gpu)
+{
+	static uw color;
+	if (pass == 1)
+	{
+		color = data;
+		v1.setRGB(data);
+	}
+	if (pass == 2) 
+	{
+		v1.setXY(data);
+		
+		//Place pixel in vram
+		// gpu->VRAM[v1.pos.y * 1024 + v1.pos.x] = (v1.color.r) | (v1.color.b);
+		gpu->VRAM[v1.pos.y * 1024 + v1.pos.x] = (((v1.color.b & 0xFF) / 4) << 10) | (((v1.color.g & 0xFF) / 4) << 5) | ((v1.color.r & 0xFF) / 4);
+		// gpu->VRAM[v1.pos.y * 1024 + v1.pos.x] = truncateColor24to15(color);
+
+		GPU::chageState(new Idle());
+	}	
 
 	pass++;
 }
@@ -571,11 +593,15 @@ uw GPU::gpuReadStat()
 
 void GPU::gpu0Command(uw command)
 {
+	// fprintf(stderr, "[GPU0] command: %x\n", command);
+
 	state->dispatch(command, this);
 }
 
 void GPU::gpu0Command(uw* command, uw size)
 {
+	// fprintf(stderr, "[GPU0] command: %x, size: %x\n", *command, size);
+
 	GPU::chageState(new Idle());
 
 	for (uw i = 0; i < size; i++)

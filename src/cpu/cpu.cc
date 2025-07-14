@@ -19,7 +19,7 @@ void CPU::reset()
     cop2c = { 0 };
     cop2d = { 0 };
     
-    copr[12] = 0x10900000;
+    status.reg = 0x10900000;
     copr[15] = 0x2; // Co-processor Revision
     
     setpc(0xbfc00000);
@@ -115,26 +115,29 @@ void CPU::step(bool branched)
 {
     printTTY();
 
+    execption_pc = pc;
+
     //Handle IRQs
     if (branched == false) {
        if ((core->getIO()->i_stat & core->getIO()->i_mask) > 0) {
-           if (((copr[12] & 0x400) & (copr[13] & 0x400)) && ((copr[12] & 0x1) == 0x1)) 
+           if (((status.reg & 0x400) & (cause.reg & 0x400)) && ((status.reg & 0x1) == 0x1)) 
            {
             //    printf("\033[1;36m%s: %x\033[0m\n", "IRQ WAS FIRED", (core->getIO()->i_stat & core->getIO()->i_mask));
-               exception(0x400, false);
+               exception(EXECPTION::INT, false);
            }
        }
     }
 
     // TODO - make this optional based on if the user loads a PSX-EXE
-    // bootstrap();
+    bootstrap();
 
     uw code = *instCache++; pc += 4;
     base[0] = 0;
     opcodeCount++;
 
-    int32_t a;
-    int32_t b;
+    uint32_t a;
+    uint32_t b;
+    uint32_t result;
 
 switch(opcode) {
         case 0: // SPECIAL
@@ -168,7 +171,7 @@ switch(opcode) {
                 case 8: // JR
                     if (base[rs] % 4 != 0)
                     {
-                        exception(0x10, branched);
+                        exception(EXECPTION::ADRESS_ERROR_LOAD, branched);
                         break;
                     }
                     branch(base[rs]);
@@ -177,7 +180,7 @@ switch(opcode) {
                 case 9: // JALR
                     if (base[rs] % 4 != 0)
                     {
-                        exception(0x10, branched);
+                        exception(EXECPTION::ADRESS_ERROR_LOAD, branched);
                         break;
                     }
                     base[rd] = pc + 4;
@@ -187,10 +190,11 @@ switch(opcode) {
                 case 12: // SYSCALL
                     pc -= 4;
 					//std::cout << "Syscall" << std::endl;
-                    exception(0x20, branched);
+                    exception(EXECPTION::SYSCALL, branched);
                     break;
                     
                 case 13: // BREAK
+                    exception(EXECPTION::BREAKPOINT, branched);
                     break;
                     
                 case 16: // MFHI
@@ -220,7 +224,7 @@ switch(opcode) {
                 case 26: // DIV
                     if (0 == base[rt]) {
                         res.u32[0] = ((sw)base[rs] < 0) ? 0x00000001 : 0xffffffff;
-                        res.u32[1] = rs;
+                        res.u32[1] = base[rs];
                     }
                     else if((uw)base[rs] == 0x80000000 && (uw)base[rt] == 0xffffffff) {
                         res.u32[0] = 0x80000000;
@@ -233,6 +237,10 @@ switch(opcode) {
                     break;
                     
                 case 27: // DIVU
+                    if (0 == base[rt]) {
+                        res.u32[0] = 0xffffffff;
+                        res.u32[1] = base[rs];
+                    }
                     if (base[rt]) {
                         res.u32[0] = base[rs] / base[rt];
                         res.u32[1] = base[rs] % base[rt];
@@ -242,16 +250,17 @@ switch(opcode) {
                 case 32: // ADD
                     a = base[rs];
                     b = base[rt];
-                    if ((!((a ^ b) & 0x80000000) && (((a+b)) ^ a) & 0x80000000)) { [[unlikely]]	
-                        exception(0x30, branched);
+                    result = a + b;
+                    if ((!((a ^ b) & 0x80000000) && (result ^ a) & 0x80000000)) { [[unlikely]]	
+                        exception(EXECPTION::ARITHMETIC_OVERFLOW, branched);
                         break;
                     }
-                    if (((int64_t)a + (int64_t)b) > INT32_MAX) 
-                    {
-                         exception(0x60, branched);
-                         break;
-                    }
-                    base[rd] = base[rs] + base[rt];
+                    // if (((int64_t)a + (int64_t)b) > INT32_MAX) 
+                    // {
+                    //      exception(0x60, branched);
+                    //      break;
+                    // }
+                    base[rd] = result;
                     break;
                     
                 case 33: // ADDU
@@ -262,7 +271,7 @@ switch(opcode) {
                     a = base[rs];
                     b = base[rt];
                     if (((a ^ b) & 0x80000000) && ((a - b) ^ a) & 0x80000000) { [[unlikely]]	
-                        exception(0x30, branched);
+                        exception(EXECPTION::ARITHMETIC_OVERFLOW, branched);
                         break;
                     }
                     base[rd] = base[rs] - base[rt];
@@ -374,7 +383,7 @@ switch(opcode) {
             a = base[rs];
             b = imm;
             if ((!((a ^ b) & 0x80000000) && (((a+b)) ^ a) & 0x80000000)) { [[unlikely]]	
-                exception(0x30, branched);
+                exception(EXECPTION::ARITHMETIC_OVERFLOW, branched);
                 break;
             }
             base[rt] = base[rs] + imm;
@@ -389,7 +398,7 @@ switch(opcode) {
             break;
             
         case 11: // SLTIU
-            base[rt] = base[rs] < immu;
+            base[rt] = base[rs] < imm;
             break;
             
         case 12: // ANDI
@@ -412,15 +421,37 @@ switch(opcode) {
 			//std::cout << "cop0 something" << std::endl;
             switch(rs) {
                 case MFC:
+                    if (13 == rd) {
+                        base[rt] = cause.reg;
+                        return;
+                    }
+                    if (12 == rd) {
+                        base[rt] = status.reg;
+                        return;
+                    }
                     base[rt] = copr[rd];
 					break;
 
                 case MTC:
+                    if (13 == rd) {
+                        cause.reg = base[rt];
+                        return;
+                    }
+                    if (12 == rd) {
+                        status.reg = base[rt];
+                        return;
+                    }
                     copr[rd] = base[rt];
                     break;
                     
                 case RFE: // Return from exception
-                    copr[12] = (copr[12] & ~(0xf)) | ((copr[12] >> 2) & 0xf);
+                    // copr[12] = (copr[12] & ~(0xf)) | ((copr[12] >> 2) & 0xf);
+                    // copr[12] = ( ( copr[12] >> 2 ) & 0x0000000fu ) | ( copr[12] & 0xfffffff0u );
+                    status.interruptEnable = status.previousInterruptEnable;
+                    status.mode = status.previousMode;
+
+                    status.previousInterruptEnable = status.oldInterruptEnable;
+                    status.previousMode = status.oldMode;
                     break;
                     
                 default:
@@ -463,6 +494,11 @@ switch(opcode) {
             break;
             
         case 33: // LH
+            if ((ob & 1)) [[unlikely]] 
+            {
+                exception(EXECPTION::ADRESS_ERROR_LOAD, branched);
+                return;
+            }
             base[rt] = (sh)core->getMem()->read<uh>(ob);
             break;
             
@@ -471,6 +507,11 @@ switch(opcode) {
             break;
             
         case 35: // LW
+            if ((ob & 3)) [[unlikely]] 
+            {
+                exception(EXECPTION::ADRESS_ERROR_LOAD, branched);
+                return;
+            }
             base[rt] = core->getMem()->read<uw>(ob);
             break;
             
@@ -479,6 +520,11 @@ switch(opcode) {
             break;
             
         case 37: // LHU
+            if ((ob & 1)) [[unlikely]] 
+            {
+                exception(EXECPTION::ADRESS_ERROR_LOAD, branched);
+                return;
+            }
             base[rt] = core->getMem()->read<uh>(ob);
             break;
             
@@ -491,6 +537,11 @@ switch(opcode) {
             break;
             
         case 41: // SH
+            if ((ob & 1)) [[unlikely]] 
+            {
+                exception(EXECPTION::ADDRES_ERROR_STORE, branched);
+                return;
+            }
             core->getMem()->write<uh>(ob, base[rt]);
             break;
             
@@ -499,6 +550,11 @@ switch(opcode) {
             break;
             
         case 43: // SW
+            if ((ob & 3)) [[unlikely]] 
+            {
+                exception(EXECPTION::ADDRES_ERROR_STORE, branched);
+                return;
+            }
             core->getMem()->write<uw>(ob, base[rt]);
             break;
             
@@ -618,28 +674,45 @@ void CPU::branch(uw addr)
     step (true);
     setpc(addr);
     
-    if ((++count2 % 4) == 0) { count2 = 0;
-        // Exceptions
-        if (data32 & mask32) {
-            if ((copr[12] & 0x401) == 0x401) {
-                exception(0x400, false);
-            }
-        }
-    }
+    // if ((++count2 % 4) == 0) { count2 = 0;
+    //     // Exceptions
+    //     if (data32 & mask32) {
+    //         if ((status.reg & 0x401) == 0x401) {
+    //             exception(EXECPTION::INT, false);
+    //         }
+    //     }
+    // }
 }
 
 //Probably works
-void CPU::exception(uw code, bool branched)
+void CPU::exception(EXECPTION code, bool branched)
 {
     if (branched) {
         printx("  Exception %s", "branched");
     }
 
-    copr[12] = (copr[12] & ~(0x3f)) | ((copr[12] << 2) & 0x3f);
-    copr[13] = code;
-    copr[14] = pc;
+    if (EXECPTION::INT == code) 
+    {
+        cause.interrupt = 1;
+    }
+
+    // copr[12] = (copr[12] & ~(0x3f)) | ((copr[12] << 2) & 0x3f);
+    // copr[12] = ( ( copr[12] & 0x0000000fu ) << 2 ) | ( copr[12] & 0xffffffc0u );
+
+    auto _interruptPending = cause.interrupt;
+    cause.reg = 0;
+    cause.interrupt = _interruptPending;
+
+    status.enterException();
+    cause.excode = code;
+
+    if (EXECPTION::INT == code) 
+    {
+        copr[14] = pc;
+    }
+    copr[14] = execption_pc;
     
-    if ((copr[12] & 0x40000) == 0x40000)
+    if ((status.reg  & 0x40000) == 0x40000)
         setpc(0xbfc00180);
     else 
         setpc(0x80000080);
@@ -716,7 +789,9 @@ inline void CPU::OP_COP0() {
         break;
         
     case RFE: // Return from exception
-        copr[12] = (copr[12] & ~(0xf)) | ((copr[12] >> 2) & 0xf);
+        // copr[12] = (copr[12] & ~(0x3)) | ((copr[12] >> 2) & 0xf);
+        
+
         break;
         
     default:
@@ -785,7 +860,7 @@ inline void CPU::OP_SRLV() { base[rd] = base[rt] >> (base[rs] & 31); }
 inline void CPU::OP_SRAV() { base[rd] = (sw)base[rt] >> (base[rs] & 31); }
 inline void CPU::OP_JR() { branch(base[rs]); }
 inline void CPU::OP_JALR() { base[rd] = pc + 4; branch(base[rs]); }
-inline void CPU::OP_SYSCALL(bool branched) { pc -= 4; exception(0x20, branched); }
+inline void CPU::OP_SYSCALL(bool branched) { pc -= 4; exception(EXECPTION::SYSCALL, branched); }
 inline void CPU::OP_BREAK() {  }
 inline void CPU::OP_MFHI() { base[rd] = res.u32[1]; }
 inline void CPU::OP_MTHI() { res.u32[1] = base[rs]; }

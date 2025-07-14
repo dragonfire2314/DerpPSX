@@ -130,7 +130,57 @@ public:
         uw reg;
     };
 
+    union EXECPTION_STATUS {
+        enum class Mode : uint32_t { kernel = 0, user = 1 };
+        enum class BootExceptionVectors { ram = 0, rom = 1 };
+        struct {
+            uint32_t interruptEnable : 1;
+            Mode mode : 1;
+
+            uint32_t previousInterruptEnable : 1;
+            Mode previousMode : 1;
+
+            uint32_t oldInterruptEnable : 1;
+            Mode oldMode : 1;
+
+            uint32_t : 2;
+
+            uint32_t interruptMask : 8;
+            uint32_t isolateCache : 1;
+            uint32_t swappedCache : 1;
+            uint32_t writeZeroAsParityBits : 1;
+            uint32_t : 1;  // CM
+            uint32_t cacheParityError : 1;
+            uint32_t tlbShutdown : 1;  // TS
+
+            BootExceptionVectors bootExceptionVectors : 1;
+            uint32_t : 2;
+            uint32_t reverseEndianness : 1;
+            uint32_t : 2;
+
+            uint32_t cop0Enable : 1;
+            uint32_t cop1Enable : 1;
+            uint32_t cop2Enable : 1;
+            uint32_t cop3Enable : 1;
+        };
+
+        void enterException() {
+            oldInterruptEnable = previousInterruptEnable;
+            oldMode = previousMode;
+
+            previousInterruptEnable = interruptEnable;
+            previousMode = mode;
+
+            interruptEnable = false;
+            mode = EXECPTION_STATUS::Mode::kernel;
+        };
+
+        uint32_t reg;
+        EXECPTION_STATUS() : reg(0) {}
+    };
+
     EXECPTIONS_CAUSE cause;
+    EXECPTION_STATUS status;
 
     Core* core;
 
@@ -138,13 +188,15 @@ public:
     
 public:
     uw base[32], copr[16], pc;
+
+    uw execption_pc;
     
     
 	CPU(Core* _core);
 
     void init();
 
-	void exception(uw e, bool branched);
+	void exception(EXECPTION e, bool branched);
     void reset();
     void setpc(uw addr);
     void bootstrap();
