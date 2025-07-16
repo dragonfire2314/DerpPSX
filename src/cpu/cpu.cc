@@ -108,7 +108,38 @@ void CPU::bootstrap()
         base[28] = exeHeader->initalR28; 
         base[29] = exeHeader->initalR29_30; 
         base[30] = exeHeader->initalR29_30; 
+
+        delete exe_data;
     }
+}
+
+void CPU::moveDelaySlots()
+{
+    if (DELAY_SLOT::TYPE::VALID == slots[0].type) {
+        // base[slots[0].reg] = slots[0].data;
+        setReg(slots[0].reg, slots[0].data);
+    }
+    slots[0] = slots[1];
+    slots[1] = EMPTY_SLOT;
+}
+
+void CPU::pushDelaySlot(uw _data, ub reg)
+{
+    if (reg == 0) return;
+    if (slots[0].reg == reg) {
+        slots[0] = EMPTY_SLOT;
+        return;
+    }
+    slots[1] = {_data, reg, DELAY_SLOT::TYPE::VALID};
+}
+
+void CPU::setReg(ub reg, uw data)
+{
+    if (reg == 0) return;
+    if (slots[0].reg == reg)
+        slots[0] = EMPTY_SLOT;
+    
+    base[reg] = data;
 }
 
 void CPU::step(bool branched)
@@ -330,7 +361,7 @@ switch(opcode) {
                 }
                 break;
             }
-            if ((rt & 0x1) == 0x1) 
+            if ((rt & 0x1)) 
             {
                 if ((sw)base[rs] >= 0) {
                         branch(baddr);
@@ -516,6 +547,11 @@ switch(opcode) {
             break;
             
         case 36: // LBU
+            isDelayInstruction = true;
+            delayedInstruction = 36;
+            delayAddress = ob;
+            delayRegister = rt;
+            
             base[rt] = core->getMem()->read<ub>(ob);
             break;
             

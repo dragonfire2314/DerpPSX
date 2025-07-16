@@ -520,6 +520,9 @@ void GPU::CopyRectangle_CPU_to_VRAM::dispatch(uw data, GPU* gpu)
 				}
 			}
 
+			delete tran_data;
+			delete outBuffer;
+
 			GPU::chageState(new Idle());
 		}
 	}

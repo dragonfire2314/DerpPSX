@@ -182,6 +182,23 @@ public:
     EXECPTIONS_CAUSE cause;
     EXECPTION_STATUS status;
 
+    struct DELAY_SLOT {
+    enum TYPE {
+            VALID,
+            EMPTY
+        };
+        uw data;
+        ub reg;
+        TYPE type;
+    };
+
+    #define EMPTY_SLOT {0,0,DELAY_SLOT::TYPE::EMPTY}
+
+    DELAY_SLOT slots[2];
+
+    void moveDelaySlots();
+    void pushDelaySlot(uw _data, ub reg);
+
     Core* core;
 
     GTE gte;
@@ -190,6 +207,13 @@ public:
     uw base[32], copr[16], pc;
 
     uw execption_pc;
+
+    void setReg(ub reg, uw data);
+    
+    bool isDelayInstruction = false;
+    ub delayedInstruction;
+    ub delayRegister;
+    uw delayAddress;
     
     
 	CPU(Core* _core);
