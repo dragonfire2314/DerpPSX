@@ -108,15 +108,12 @@ void CPU::bootstrap()
         base[28] = exeHeader->initalR28; 
         base[29] = exeHeader->initalR29_30; 
         base[30] = exeHeader->initalR29_30; 
-
-        delete exe_data;
     }
 }
 
 void CPU::moveDelaySlots()
 {
     if (DELAY_SLOT::TYPE::VALID == slots[0].type) {
-        // base[slots[0].reg] = slots[0].data;
         setReg(slots[0].reg, slots[0].data);
     }
     slots[0] = slots[1];
@@ -126,45 +123,60 @@ void CPU::moveDelaySlots()
 void CPU::pushDelaySlot(uw _data, ub reg)
 {
     if (reg == 0) return;
-    if (slots[0].reg == reg) {
-        slots[0] = EMPTY_SLOT;
-        return;
-    }
+    // if (slots[0].reg == reg) {
+    //     slots[0] = EMPTY_SLOT;
+    //     return;
+    // }
     slots[1] = {_data, reg, DELAY_SLOT::TYPE::VALID};
 }
 
 void CPU::setReg(ub reg, uw data)
 {
     if (reg == 0) return;
-    if (slots[0].reg == reg)
-        slots[0] = EMPTY_SLOT;
+    // if (slots[0].reg == reg)
+    //     slots[0] = EMPTY_SLOT;
     
     base[reg] = data;
 }
 
-void CPU::step(bool branched)
+void CPU::step()
 {
     printTTY();
 
     execption_pc = pc;
 
     //Handle IRQs
-    if (branched == false) {
+    if (isBranched == false) {
        if ((core->getIO()->i_stat & core->getIO()->i_mask) > 0) {
            if (((status.reg & 0x400) & (cause.reg & 0x400)) && ((status.reg & 0x1) == 0x1)) 
            {
             //    printf("\033[1;36m%s: %x\033[0m\n", "IRQ WAS FIRED", (core->getIO()->i_stat & core->getIO()->i_mask));
-               exception(EXECPTION::INT, false);
+               exception(EXECPTION::INT);
            }
        }
     }
 
+    if (pc == 0x3380 - 8)
+    {
+        printf("PC\n");
+    }
+
+    if (pc == 0x800673a8 - 8)
+    {
+        printf("PC\n");
+    }
+
     // TODO - make this optional based on if the user loads a PSX-EXE
-    bootstrap();
+    // bootstrap();
 
     uw code = *instCache++; pc += 4;
     base[0] = 0;
     opcodeCount++;
+
+    if (isBranched) {
+        setpc(branchAddress);
+        isBranched = false;
+    }
 
     uint32_t a;
     uint32_t b;
@@ -175,34 +187,34 @@ switch(opcode) {
             switch(code & 63) {
                 case 0: // SLL
                     if (code) { // No operation?
-                        base[rd] = base[rt] << sa;
+                        setReg(rd, base[rt] << sa);
                     }
                     break;
                     
                 case 2: // SRL
-                    base[rd] = base[rt] >> sa;
+                    setReg(rd, base[rt] >> sa);
                     break;
                     
                 case 3: // SRA
-                    base[rd] = (sw)base[rt] >> sa;
+                    setReg(rd, (sw)base[rt] >> sa);
                     break;
                     
                 case 4: // SLLV
-                    base[rd] = base[rt] << (base[rs] & 31);
+                    setReg(rd, base[rt] << (base[rs] & 31));
                     break;
                     
                 case 6: // SRLV
-                    base[rd] = base[rt] >> (base[rs] & 31);
+                    setReg(rd, base[rt] >> (base[rs] & 31));
                     break;
                     
                 case 7: // SRAV
-                    base[rd] = (sw)base[rt] >> (base[rs] & 31);
+                    setReg(rd, (sw)base[rt] >> (base[rs] & 31));
                     break;
                     
                 case 8: // JR
                     if (base[rs] % 4 != 0)
                     {
-                        exception(EXECPTION::ADRESS_ERROR_LOAD, branched);
+                        exception(EXECPTION::ADRESS_ERROR_LOAD);
                         break;
                     }
                     branch(base[rs]);
@@ -211,25 +223,25 @@ switch(opcode) {
                 case 9: // JALR
                     if (base[rs] % 4 != 0)
                     {
-                        exception(EXECPTION::ADRESS_ERROR_LOAD, branched);
+                        exception(EXECPTION::ADRESS_ERROR_LOAD);
                         break;
                     }
-                    base[rd] = pc + 4;
+                    setReg(rd, pc + 4);
                     branch(base[rs]);
                     break;
                     
                 case 12: // SYSCALL
                     pc -= 4;
 					//std::cout << "Syscall" << std::endl;
-                    exception(EXECPTION::SYSCALL, branched);
+                    exception(EXECPTION::SYSCALL);
                     break;
                     
                 case 13: // BREAK
-                    exception(EXECPTION::BREAKPOINT, branched);
+                    exception(EXECPTION::BREAKPOINT);
                     break;
                     
                 case 16: // MFHI
-                    base[rd] = res.u32[1];
+                    setReg(rd, res.u32[1]);
                     break;
                     
                 case 17: // MTHI
@@ -237,7 +249,7 @@ switch(opcode) {
                     break;
                     
                 case 18: // MFLO
-                    base[rd] = res.u32[0];
+                    setReg(rd, res.u32[0]);
                     break;
                     
                 case 19: // MTLO
@@ -283,7 +295,7 @@ switch(opcode) {
                     b = base[rt];
                     result = a + b;
                     if ((!((a ^ b) & 0x80000000) && (result ^ a) & 0x80000000)) { [[unlikely]]	
-                        exception(EXECPTION::ARITHMETIC_OVERFLOW, branched);
+                        exception(EXECPTION::ARITHMETIC_OVERFLOW);
                         break;
                     }
                     // if (((int64_t)a + (int64_t)b) > INT32_MAX) 
@@ -291,49 +303,49 @@ switch(opcode) {
                     //      exception(0x60, branched);
                     //      break;
                     // }
-                    base[rd] = result;
+                    setReg(rd, result);
                     break;
                     
                 case 33: // ADDU
-                    base[rd] = base[rs] + base[rt];
+                    setReg(rd, base[rs] + base[rt]);
                     break;
                     
                 case 34: // SUB
                     a = base[rs];
                     b = base[rt];
                     if (((a ^ b) & 0x80000000) && ((a - b) ^ a) & 0x80000000) { [[unlikely]]	
-                        exception(EXECPTION::ARITHMETIC_OVERFLOW, branched);
+                        exception(EXECPTION::ARITHMETIC_OVERFLOW);
                         break;
                     }
-                    base[rd] = base[rs] - base[rt];
+                    setReg(rd, base[rs] - base[rt]);
                     break;
                     
                 case 35: // SUBU
-                    base[rd] = base[rs] - base[rt];
+                    setReg(rd, base[rs] - base[rt]);
                     break;
                     
                 case 36: // AND
-                    base[rd] = base[rs] & base[rt];
+                    setReg(rd, base[rs] & base[rt]);
                     break;
                     
                 case 37: // OR
-                    base[rd] = base[rs] | base[rt];
+                    setReg(rd, base[rs] | base[rt]);
                     break;
                     
                 case 38: // XOR
-                    base[rd] = base[rs] ^ base[rt];
+                    setReg(rd, base[rs] ^ base[rt]);
                     break;
                     
                 case 39: // NOR
-                    base[rd] = ~(base[rs] | base[rt]);
+                    setReg(rd, ~(base[rs] | base[rt]));
                     break;
                     
                 case 42: // SLT
-                    base[rd] = (sw)base[rs] < (sw)base[rt];
+                    setReg(rd, (sw)base[rs] < (sw)base[rt]);
                     break;
                     
                 case 43: // SLTU
-                    base[rd] = base[rs] < base[rt];
+                    setReg(rd, base[rs] < base[rt]);
                     break;
                     
                 default:
@@ -361,7 +373,7 @@ switch(opcode) {
                 }
                 break;
             }
-            if ((rt & 0x1)) 
+            if ((rt & 0x1) == 0x1) 
             {
                 if ((sw)base[rs] >= 0) {
                         branch(baddr);
@@ -414,38 +426,38 @@ switch(opcode) {
             a = base[rs];
             b = imm;
             if ((!((a ^ b) & 0x80000000) && (((a+b)) ^ a) & 0x80000000)) { [[unlikely]]	
-                exception(EXECPTION::ARITHMETIC_OVERFLOW, branched);
+                exception(EXECPTION::ARITHMETIC_OVERFLOW);
                 break;
             }
-            base[rt] = base[rs] + imm;
+            setReg(rt, base[rs] + imm);
             break;
             
         case 9: // ADDIU
-            base[rt] = base[rs] + imm;
+            setReg(rt, base[rs] + imm);
             break;
             
         case 10: // SLTI
-            base[rt] = (sw)base[rs] < imm;
+            setReg(rt, (sw)base[rs] < imm);
             break;
             
         case 11: // SLTIU
-            base[rt] = base[rs] < imm;
+            setReg(rt, base[rs] < imm);
             break;
             
         case 12: // ANDI
-            base[rt] = base[rs] & immu;
+            setReg(rt, base[rs] & immu);
             break;
             
         case 13: // ORI
-            base[rt] = base[rs] | immu;
+            setReg(rt, base[rs] | immu);
             break;
             
         case 14: // XORI
-            base[rt] = base[rs] ^ immu;
+            setReg(rt, base[rs] ^ immu);
             break;
             
         case 15: // LUI
-            base[rt] = code << 16;
+            setReg(rt, code << 16);
             break;
             
         case 16: // COP0
@@ -453,24 +465,24 @@ switch(opcode) {
             switch(rs) {
                 case MFC:
                     if (13 == rd) {
-                        base[rt] = cause.reg;
-                        return;
+                        setReg(rt, cause.reg);
+                        break;
                     }
                     if (12 == rd) {
-                        base[rt] = status.reg;
-                        return;
+                        setReg(rt, status.reg);
+                        break;
                     }
-                    base[rt] = copr[rd];
+                    setReg(rt, copr[rd]);
 					break;
 
                 case MTC:
                     if (13 == rd) {
                         cause.reg = base[rt];
-                        return;
+                        break;
                     }
                     if (12 == rd) {
                         status.reg = base[rt];
-                        return;
+                        break;
                     }
                     copr[rd] = base[rt];
                     break;
@@ -494,13 +506,13 @@ switch(opcode) {
         case 18: // COP2
             switch(rs) {
                 case MFC:
-                    //base[rt] = cop2d.iuw[rd];
-                    base[rt] = gte.read(rd);
+                    //setReg(rt, cop2d.iuw[rd];
+                    setReg(rt, gte.read(rd));
                     break;
                     
                 case CFC:
-                    // base[rt] = cop2c.iuw[rd];
-                    base[rt] = gte.read(rd+32);
+                    // setReg(rt, cop2c.iuw[rd];
+                    setReg(rt, gte.read(rd+32));
                     break;
                     
                 case MTC:
@@ -521,16 +533,18 @@ switch(opcode) {
             break;
             
         case 32: // LB
-            base[rt] = (sb)core->getMem()->read<ub>(ob);
+            setReg(rt, (sb)core->getMem()->read<ub>(ob));
+            // pushDelaySlot(core->getMem()->read<ub>(ob), rt);
             break;
             
         case 33: // LH
             if ((ob & 1)) [[unlikely]] 
             {
-                exception(EXECPTION::ADRESS_ERROR_LOAD, branched);
-                return;
+                exception(EXECPTION::ADRESS_ERROR_LOAD);
+                break;
             }
-            base[rt] = (sh)core->getMem()->read<uh>(ob);
+            setReg(rt, (sh)core->getMem()->read<uh>(ob));
+            // pushDelaySlot(core->getMem()->read<uh>(ob), rt); // TODO - Make deticated types
             break;
             
         case 34: // LWL
@@ -540,28 +554,27 @@ switch(opcode) {
         case 35: // LW
             if ((ob & 3)) [[unlikely]] 
             {
-                exception(EXECPTION::ADRESS_ERROR_LOAD, branched);
-                return;
+                exception(EXECPTION::ADRESS_ERROR_LOAD);
+                break;
             }
-            base[rt] = core->getMem()->read<uw>(ob);
+            pushDelaySlot(core->getMem()->read<uw>(ob), rt);
+            // fprintf(stderr, "reg: %x, data: %x\n", rt, core->getMem()->read<uw>(ob));
+            // setReg(rt, core->getMem()->read<uw>(ob));
             break;
             
         case 36: // LBU
-            isDelayInstruction = true;
-            delayedInstruction = 36;
-            delayAddress = ob;
-            delayRegister = rt;
-            
-            base[rt] = core->getMem()->read<ub>(ob);
+            pushDelaySlot(core->getMem()->read<ub>(ob), rt);
+            // setReg(rt, core->getMem()->read<ub>(ob));
             break;
             
         case 37: // LHU
             if ((ob & 1)) [[unlikely]] 
             {
-                exception(EXECPTION::ADRESS_ERROR_LOAD, branched);
-                return;
+                exception(EXECPTION::ADRESS_ERROR_LOAD);
+                break;
             }
-            base[rt] = core->getMem()->read<uh>(ob);
+            pushDelaySlot(core->getMem()->read<uh>(ob), rt);
+            // setReg(rt, core->getMem()->read<uh>(ob));
             break;
             
         case 38: // LWR
@@ -575,8 +588,8 @@ switch(opcode) {
         case 41: // SH
             if ((ob & 1)) [[unlikely]] 
             {
-                exception(EXECPTION::ADDRES_ERROR_STORE, branched);
-                return;
+                exception(EXECPTION::ADDRES_ERROR_STORE);
+                break;
             }
             core->getMem()->write<uh>(ob, base[rt]);
             break;
@@ -588,8 +601,8 @@ switch(opcode) {
         case 43: // SW
             if ((ob & 3)) [[unlikely]] 
             {
-                exception(EXECPTION::ADDRES_ERROR_STORE, branched);
-                return;
+                exception(EXECPTION::ADDRES_ERROR_STORE);
+                break;
             }
             core->getMem()->write<uw>(ob, base[rt]);
             break;
@@ -616,6 +629,11 @@ switch(opcode) {
             printx("/// PSeudo 0x%08x | Unknown basic opcode 0x%08x | %d", pc, code, opcode);
             break;
     }
+
+    moveDelaySlots();
+
+    // if (!branched)
+        // moveDelaySlots();
 
     // switch (opcode)
     // {
@@ -703,13 +721,17 @@ switch(opcode) {
 }
 
 // TODO - Redo branch code, this count2 scares me, idk what it does
-int count2 = 0; // Temp hack ????
+// int count2 = 0; // Temp hack ????
 void CPU::branch(uw addr)
 {
     // Execute instruction in slot
-    step (true);
-    setpc(addr);
+    // moveDelaySlots();
+    // step ();
+    // setpc(addr);
     
+    isBranched = true;
+    branchAddress = addr;
+
     // if ((++count2 % 4) == 0) { count2 = 0;
     //     // Exceptions
     //     if (data32 & mask32) {
@@ -721,9 +743,9 @@ void CPU::branch(uw addr)
 }
 
 //Probably works
-void CPU::exception(EXECPTION code, bool branched)
+void CPU::exception(EXECPTION code)
 {
-    if (branched) {
+    if (isBranched) {
         printx("  Exception %s", "branched");
     }
 
@@ -784,153 +806,153 @@ inline void CPU::OP_BcondZ() {
         break;
     }
 }
-inline void CPU::OP_J() { branch(saddr); }
-inline void CPU::OP_JAL() { base[31] = pc + 4; branch(saddr); }
-inline void CPU::OP_BEQ() { 
-    if (base[rs] == base[rt]) {
-        branch(baddr);
-    }
-}
-inline void CPU::OP_BNE() { 
-    if (base[rs] != base[rt]) {
-        branch(baddr);
-    }
-}
-inline void CPU::OP_BLEZ() { 
-    if ((sw)base[rs] <= 0) {
-        branch(baddr);
-    }
-}
-inline void CPU::OP_BGTZ() { 
-    if ((sw)base[rs] > 0) {
-        branch(baddr);
-    } 
-}
-inline void CPU::OP_ADDI() { base[rt] = base[rs] + imm; }
-inline void CPU::OP_ADDIU() { base[rt] = base[rs] + imm; }
-inline void CPU::OP_SLTI() { base[rt] = (sw)base[rs] < imm; }
-inline void CPU::OP_SLTIU() { base[rt] = base[rs] < immu; }
-inline void CPU::OP_ANDI() { base[rt] = base[rs] & immu; }
-inline void CPU::OP_ORI() { base[rt] = base[rs] | immu; }
-inline void CPU::OP_XORI() { base[rt] = base[rs] ^ immu; }
-inline void CPU::OP_LUI() { base[rt] = code << 16; }
-inline void CPU::OP_COP0() { 
-    switch(rs) {
-    case MFC:
-        base[rt] = copr[rd];
-		break;
+// inline void CPU::OP_J() { branch(saddr); }
+// inline void CPU::OP_JAL() { base[31] = pc + 4; branch(saddr); }
+// inline void CPU::OP_BEQ() { 
+//     if (base[rs] == base[rt]) {
+//         branch(baddr);
+//     }
+// }
+// inline void CPU::OP_BNE() { 
+//     if (base[rs] != base[rt]) {
+//         branch(baddr);
+//     }
+// }
+// inline void CPU::OP_BLEZ() { 
+//     if ((sw)base[rs] <= 0) {
+//         branch(baddr);
+//     }
+// }
+// inline void CPU::OP_BGTZ() { 
+//     if ((sw)base[rs] > 0) {
+//         branch(baddr);
+//     } 
+// }
+// inline void CPU::OP_ADDI() { setReg(rt, base[rs] + imm; }
+// inline void CPU::OP_ADDIU() { setReg(rt, base[rs] + imm; }
+// inline void CPU::OP_SLTI() { setReg(rt, (sw)base[rs] < imm; }
+// inline void CPU::OP_SLTIU() { setReg(rt, base[rs] < immu; }
+// inline void CPU::OP_ANDI() { setReg(rt, base[rs] & immu; }
+// inline void CPU::OP_ORI() { setReg(rt, base[rs] | immu; }
+// inline void CPU::OP_XORI() { setReg(rt, base[rs] ^ immu; }
+// inline void CPU::OP_LUI() { setReg(rt, code << 16; }
+// inline void CPU::OP_COP0() { 
+//     switch(rs) {
+//     case MFC:
+//         setReg(rt, copr[rd];
+// 		break;
 
-    case MTC:
-        copr[rd] = base[rt];
-        break;
+//     case MTC:
+//         copr[rd] = base[rt];
+//         break;
         
-    case RFE: // Return from exception
-        // copr[12] = (copr[12] & ~(0x3)) | ((copr[12] >> 2) & 0xf);
+//     case RFE: // Return from exception
+//         // copr[12] = (copr[12] & ~(0x3)) | ((copr[12] >> 2) & 0xf);
         
 
-        break;
+//         break;
         
-    default:
-        printx("  0x%08x | Unknown cop0 opcode 0x%08x | %d", pc, code, rs);
-        break;
-    }
-}
-inline void CPU::OP_COP1() { fprintf(stderr, "COP1 doesn't exist\n"); }
-inline void CPU::OP_COP2() { 
-    switch(rs) {
-    case MFC:
-        //base[rt] = cop2d.iuw[rd];
-        base[rt] = gte.read(rd);
-        break;
+//     default:
+//         printx("  0x%08x | Unknown cop0 opcode 0x%08x | %d", pc, code, rs);
+//         break;
+//     }
+// }
+// inline void CPU::OP_COP1() { fprintf(stderr, "COP1 doesn't exist\n"); }
+// inline void CPU::OP_COP2() { 
+//     switch(rs) {
+//     case MFC:
+//         //setReg(rt, cop2d.iuw[rd];
+//         setReg(rt, gte.read(rd);
+//         break;
         
-    case CFC:
-        // base[rt] = cop2c.iuw[rd];
-        base[rt] = gte.read(rd+32);
-        break;
+//     case CFC:
+//         // setReg(rt, cop2c.iuw[rd];
+//         setReg(rt, gte.read(rd+32);
+//         break;
         
-    case MTC:
-        // cop2d.iuw[rd] = base[rt];
-        // writeCop2(rd);
-        gte.write(rd, base[rt]);
-        break;
+//     case MTC:
+//         // cop2d.iuw[rd] = base[rt];
+//         // writeCop2(rd);
+//         gte.write(rd, base[rt]);
+//         break;
         
-    case CTC:
-        //cop2c.iuw[rd] = base[rt];
-        gte.write(rd+32, base[rt]);
-        break;
+//     case CTC:
+//         //cop2c.iuw[rd] = base[rt];
+//         gte.write(rd+32, base[rt]);
+//         break;
         
-    default: // Execute GTE opcode
-        gte.execCommand(code);//Is this right?
-        break;
-    }
-}
-inline void CPU::OP_COP3() { fprintf(stderr, "COP3 doesn't exist\n"); exit(0); }
+//     default: // Execute GTE opcode
+//         gte.execCommand(code);//Is this right?
+//         break;
+//     }
+// }
+// inline void CPU::OP_COP3() { fprintf(stderr, "COP3 doesn't exist\n"); exit(0); }
 
-inline void CPU::OP_LB() { base[rt] = (sb)core->getMem()->read<ub>(ob); }
-inline void CPU::OP_LH() { base[rt] = (sh)core->getMem()->read<uh>(ob); }
-inline void CPU::OP_LWL() { opcodeLWx(<<, 0); }
-inline void CPU::OP_LW() { base[rt] = core->getMem()->read<uw>(ob); }
-inline void CPU::OP_LBU() { base[rt] = core->getMem()->read<ub>(ob); }
-inline void CPU::OP_LHU() { base[rt] = core->getMem()->read<uh>(ob); }
-inline void CPU::OP_LWR() { opcodeLWx(>>, 1); }
-inline void CPU::OP_SB() { core->getMem()->write<ub>(ob, base[rt]); }
-inline void CPU::OP_SH() { core->getMem()->write<uh>(ob, base[rt]); }
-inline void CPU::OP_SWL() { opcodeSWx(>>, 2); }
-inline void CPU::OP_SW() { core->getMem()->write<uw>(ob, base[rt]); }
-inline void CPU::OP_SWR() { opcodeSWx(<<, 3); }
+// inline void CPU::OP_LB() { setReg(rt, (sb)core->getMem()->read<ub>(ob); }
+// inline void CPU::OP_LH() { setReg(rt, (sh)core->getMem()->read<uh>(ob); }
+// inline void CPU::OP_LWL() { opcodeLWx(<<, 0); }
+// inline void CPU::OP_LW() { setReg(rt, core->getMem()->read<uw>(ob); }
+// inline void CPU::OP_LBU() { setReg(rt, core->getMem()->read<ub>(ob); }
+// inline void CPU::OP_LHU() { setReg(rt, core->getMem()->read<uh>(ob); }
+// inline void CPU::OP_LWR() { opcodeLWx(>>, 1); }
+// inline void CPU::OP_SB() { core->getMem()->write<ub>(ob, base[rt]); }
+// inline void CPU::OP_SH() { core->getMem()->write<uh>(ob, base[rt]); }
+// inline void CPU::OP_SWL() { opcodeSWx(>>, 2); }
+// inline void CPU::OP_SW() { core->getMem()->write<uw>(ob, base[rt]); }
+// inline void CPU::OP_SWR() { opcodeSWx(<<, 3); }
 
-inline void CPU::OP_LWC0() { fprintf(stderr, "OP_LWC0 doesn't exist\n"); exit(0); }
-inline void CPU::OP_LWC1() { fprintf(stderr, "OP_LWC1 doesn't exist\n"); exit(0); }
-inline void CPU::OP_LWC2() { gte.write(rt, core->getMem()->read<uw>(ob)); }
-inline void CPU::OP_LWC3() { fprintf(stderr, "OP_LWC3 doesn't exist\n"); exit(0); }
-inline void CPU::OP_SWC0() { fprintf(stderr, "OP_LWC0 doesn't exist\n"); exit(0); }
-inline void CPU::OP_SWC1() { fprintf(stderr, "OP_LWC1 doesn't exist\n"); exit(0); }
-inline void CPU::OP_SWC2() { core->getMem()->write<uw>(ob, gte.read(rt)); }
-inline void CPU::OP_SWC3() { fprintf(stderr, "OP_LWC3 doesn't exist\n"); exit(0); }
+// inline void CPU::OP_LWC0() { fprintf(stderr, "OP_LWC0 doesn't exist\n"); exit(0); }
+// inline void CPU::OP_LWC1() { fprintf(stderr, "OP_LWC1 doesn't exist\n"); exit(0); }
+// inline void CPU::OP_LWC2() { gte.write(rt, core->getMem()->read<uw>(ob)); }
+// inline void CPU::OP_LWC3() { fprintf(stderr, "OP_LWC3 doesn't exist\n"); exit(0); }
+// inline void CPU::OP_SWC0() { fprintf(stderr, "OP_LWC0 doesn't exist\n"); exit(0); }
+// inline void CPU::OP_SWC1() { fprintf(stderr, "OP_LWC1 doesn't exist\n"); exit(0); }
+// inline void CPU::OP_SWC2() { core->getMem()->write<uw>(ob, gte.read(rt)); }
+// inline void CPU::OP_SWC3() { fprintf(stderr, "OP_LWC3 doesn't exist\n"); exit(0); }
 
-inline void CPU::OP_SLL() {if (code) { base[rd] = base[rt] << sa; }}
-inline void CPU::OP_SRL() { base[rd] = base[rt] >> sa; }
-inline void CPU::OP_SRA() { base[rd] = (sw)base[rt] >> sa; }
-inline void CPU::OP_SLLV() { base[rd] = base[rt] << (base[rs] & 31); }
-inline void CPU::OP_SRLV() { base[rd] = base[rt] >> (base[rs] & 31); }
-inline void CPU::OP_SRAV() { base[rd] = (sw)base[rt] >> (base[rs] & 31); }
-inline void CPU::OP_JR() { branch(base[rs]); }
-inline void CPU::OP_JALR() { base[rd] = pc + 4; branch(base[rs]); }
-inline void CPU::OP_SYSCALL(bool branched) { pc -= 4; exception(EXECPTION::SYSCALL, branched); }
-inline void CPU::OP_BREAK() {  }
-inline void CPU::OP_MFHI() { base[rd] = res.u32[1]; }
-inline void CPU::OP_MTHI() { res.u32[1] = base[rs]; }
-inline void CPU::OP_MFLO() { base[rd] = res.u32[0]; }
-inline void CPU::OP_MTLO() { res.u32[0] = base[rs]; }
-inline void CPU::OP_MULT() { res.s64 = (sd)(sw)base[rs] * (sw)base[rt]; }
-inline void CPU::OP_MULTU() { res.s64 = (sd)base[rs] * base[rt]; }
-inline void CPU::OP_DIV() { 
-    if (0 == base[rt]) {
-        res.u32[0] = ((sw)base[rs] < 0) ? 0x00000001 : 0xffffffff;
-        res.u32[1] = rs;
-    }
-    else if((uw)base[rs] == 0x80000000 && (uw)base[rt] == 0xffffffff) {
-        res.u32[0] = 0x80000000;
-        res.u32[1] = 0x00000000;
-    }
-    else {
-        res.u32[0] = (sw)base[rs] / (sw)base[rt];
-        res.u32[1] = (sw)base[rs] % (sw)base[rt];
-    }
-}
-inline void CPU::OP_DIVU() { 
-    if (base[rt]) {
-        res.u32[0] = base[rs] / base[rt];
-        res.u32[1] = base[rs] % base[rt];
-    }
-}
-inline void CPU::OP_ADD() { base[rd] = base[rs] + base[rt]; } // Sign these?
-inline void CPU::OP_ADDU() { base[rd] = base[rs] + base[rt]; }
-inline void CPU::OP_SUB() { base[rd] = base[rs] - base[rt]; } 
-inline void CPU::OP_SUBU() { base[rd] = base[rs] - base[rt]; } // Sign?
-inline void CPU::OP_AND() { base[rd] = base[rs] & base[rt]; }
-inline void CPU::OP_OR() { base[rd] = base[rs] | base[rt]; }
-inline void CPU::OP_XOR() { base[rd] = base[rs] ^ base[rt]; }
-inline void CPU::OP_NOR() { base[rd] = ~(base[rs] | base[rt]); }
-inline void CPU::OP_SLT() { base[rd] = (sw)base[rs] < (sw)base[rt]; }
-inline void CPU::OP_SLTU() { base[rd] = base[rs] < base[rt]; }
+// inline void CPU::OP_SLL() {if (code) { setReg(rd, base[rt] << sa; }}
+// inline void CPU::OP_SRL() { setReg(rd, base[rt] >> sa; }
+// inline void CPU::OP_SRA() { setReg(rd, (sw)base[rt] >> sa; }
+// inline void CPU::OP_SLLV() { setReg(rd, base[rt] << (base[rs] & 31); }
+// inline void CPU::OP_SRLV() { setReg(rd, base[rt] >> (base[rs] & 31); }
+// inline void CPU::OP_SRAV() { setReg(rd, (sw)base[rt] >> (base[rs] & 31); }
+// inline void CPU::OP_JR() { branch(base[rs]); }
+// inline void CPU::OP_JALR() { setReg(rd, pc + 4; branch(base[rs]); }
+// inline void CPU::OP_SYSCALL(bool branched) { pc -= 4; exception(EXECPTION::SYSCALL, branched); }
+// inline void CPU::OP_BREAK() {  }
+// inline void CPU::OP_MFHI() { setReg(rd, res.u32[1]; }
+// inline void CPU::OP_MTHI() { res.u32[1] = base[rs]; }
+// inline void CPU::OP_MFLO() { setReg(rd, res.u32[0]; }
+// inline void CPU::OP_MTLO() { res.u32[0] = base[rs]; }
+// inline void CPU::OP_MULT() { res.s64 = (sd)(sw)base[rs] * (sw)base[rt]; }
+// inline void CPU::OP_MULTU() { res.s64 = (sd)base[rs] * base[rt]; }
+// inline void CPU::OP_DIV() { 
+//     if (0 == base[rt]) {
+//         res.u32[0] = ((sw)base[rs] < 0) ? 0x00000001 : 0xffffffff;
+//         res.u32[1] = rs;
+//     }
+//     else if((uw)base[rs] == 0x80000000 && (uw)base[rt] == 0xffffffff) {
+//         res.u32[0] = 0x80000000;
+//         res.u32[1] = 0x00000000;
+//     }
+//     else {
+//         res.u32[0] = (sw)base[rs] / (sw)base[rt];
+//         res.u32[1] = (sw)base[rs] % (sw)base[rt];
+//     }
+// }
+// inline void CPU::OP_DIVU() { 
+//     if (base[rt]) {
+//         res.u32[0] = base[rs] / base[rt];
+//         res.u32[1] = base[rs] % base[rt];
+//     }
+// }
+// inline void CPU::OP_ADD() { setReg(rd, base[rs] + base[rt]; } // Sign these?
+// inline void CPU::OP_ADDU() { setReg(rd, base[rs] + base[rt]; }
+// inline void CPU::OP_SUB() { setReg(rd, base[rs] - base[rt]; } 
+// inline void CPU::OP_SUBU() { setReg(rd, base[rs] - base[rt]; } // Sign?
+// inline void CPU::OP_AND() { setReg(rd, base[rs] & base[rt]; }
+// inline void CPU::OP_OR() { setReg(rd, base[rs] | base[rt]; }
+// inline void CPU::OP_XOR() { setReg(rd, base[rs] ^ base[rt]; }
+// inline void CPU::OP_NOR() { setReg(rd, ~(base[rs] | base[rt]); }
+// inline void CPU::OP_SLT() { setReg(rd, (sw)base[rs] < (sw)base[rt]; }
+// inline void CPU::OP_SLTU() { setReg(rd, base[rs] < base[rt]; }

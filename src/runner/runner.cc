@@ -17,7 +17,7 @@ void Runner::step()
 	//CPU
 	for (int t = 0; t < horizontalRes; t++) {
 		for (int i = 0; i < 564480 / horizontalRes; i++) {
-			core->getCPU()->step(false);
+			core->getCPU()->step();
 		}
 		core->getTimer()->hblank();
 		core->getCDROM()->step(564480);

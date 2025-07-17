@@ -183,7 +183,7 @@ public:
     EXECPTION_STATUS status;
 
     struct DELAY_SLOT {
-    enum TYPE {
+        enum TYPE {
             VALID,
             EMPTY
         };
@@ -207,24 +207,20 @@ public:
     uw base[32], copr[16], pc;
 
     uw execption_pc;
-
+    bool isBranched = false;
+    uw branchAddress;
+    
     void setReg(ub reg, uw data);
-    
-    bool isDelayInstruction = false;
-    ub delayedInstruction;
-    ub delayRegister;
-    uw delayAddress;
-    
     
 	CPU(Core* _core);
 
     void init();
 
-	void exception(EXECPTION e, bool branched);
+	void exception(EXECPTION e);
     void reset();
     void setpc(uw addr);
     void bootstrap();
-	void step(bool branched);
+	void step();
 
 private:
     uw code;
