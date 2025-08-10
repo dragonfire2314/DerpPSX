@@ -15,15 +15,30 @@ void Runner::step()
 	int horizontalRes = core->getGPU()->get_horizontal_timings();
 	// int horizontalRes = 368;
 	//CPU
-	for (int t = 0; t < horizontalRes; t++) {
-		for (int i = 0; i < 564480 / horizontalRes; i++) {
+
+	int cycles = 300;
+	while(true) 
+	{
+		for (int i = 0; i < cycles / 3; i++)
 			core->getCPU()->step();
+
+		core->getCDROM()->step(cycles / 1.5);
+		if (core->getGPU()->step(cycles))
+		{
+			break;
 		}
-		core->getTimer()->hblank();
-		core->getCDROM()->step(564480);
 	}
+	// core->getGPU()->status.evenOrOdd ^= 1;
 	core->getIO()->IRQ(IO_Controller::VBLANK);
-	core->getGPU()->status.evenOrOdd ^= 1;
+	// for (int t = 0; t < horizontalRes; t++) {
+	// 	for (int i = 0; i < 564480 / horizontalRes / 2; i++) {
+	// 		core->getCPU()->step();
+	// 	}
+	// 	core->getTimer()->hblank();
+	// 	core->getCDROM()->step(564480);
+	// }
+	// core->getIO()->IRQ(IO_Controller::VBLANK);
+	// core->getGPU()->status.evenOrOdd ^= 1;
 }
 
 void Runner::emu_init()

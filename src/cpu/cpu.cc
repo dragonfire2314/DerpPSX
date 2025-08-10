@@ -123,10 +123,9 @@ void CPU::moveDelaySlots()
 void CPU::pushDelaySlot(uw _data, ub reg)
 {
     if (reg == 0) return;
-    // if (slots[0].reg == reg) {
-    //     slots[0] = EMPTY_SLOT;
-    //     return;
-    // }
+    if (slots[0].reg == reg) {
+        slots[0] = EMPTY_SLOT;
+    }
     slots[1] = {_data, reg, DELAY_SLOT::TYPE::VALID};
 }
 
@@ -146,7 +145,6 @@ void CPU::step()
     execption_pc = pc;
 
     //Handle IRQs
-    if (isBranched == false) {
        if ((core->getIO()->i_stat & core->getIO()->i_mask) > 0) {
            if (((status.reg & 0x400) & (cause.reg & 0x400)) && ((status.reg & 0x1) == 0x1)) 
            {
@@ -154,7 +152,6 @@ void CPU::step()
                exception(EXECPTION::INT);
            }
        }
-    }
 
     if (pc == 0x3380 - 8)
     {
@@ -181,6 +178,10 @@ void CPU::step()
     uint32_t a;
     uint32_t b;
     uint32_t result;
+    uint32_t reg;
+    bool greaterAndEqual;
+    bool link;
+    bool condition;
 
 switch(opcode) {
         case 0: // SPECIAL
@@ -226,7 +227,9 @@ switch(opcode) {
                         exception(EXECPTION::ADRESS_ERROR_LOAD);
                         break;
                     }
+                    // printf("pc: %x\n", pc);
                     setReg(rd, pc + 4);
+
                     branch(base[rs]);
                     break;
                     
@@ -355,38 +358,59 @@ switch(opcode) {
             break;
             
         case 1: // REGIMM
-            if (0x11 == rt)
-            {
-                base[31] = pc + 4;
-                    
-                if ((sw)base[rs] >= 0) {
-                    branch(baddr);
-                }
-                break;
-            }
-            if (0x10 == rt)
-            {
-                base[31] = pc + 4;
+            greaterAndEqual = rt & 0x01;
+            link = (rt & 0x1e) == 0x10;
+            condition;
 
-                if ((sw)base[rs] < 0) {
-                    branch(baddr);
-                }
-                break;
+            if (!greaterAndEqual) {
+                // Branch On Less Than Zero (And Link)
+                // BLTZ rs, offset / BLTZAL rs, offset
+                condition = (int32_t)base[rs] < 0;
+            } else {
+                // Branch On Greater Than Or Equal To Zero (And Link)
+                // BGEZ rs, offset / BGEZAL rs, offset
+                condition = (int32_t)base[rs] >= 0;
             }
-            if ((rt & 0x1) == 0x1) 
-            {
-                if ((sw)base[rs] >= 0) {
-                        branch(baddr);
-                }
-                break;
+
+            if (link) setReg(31, pc + 4);
+
+            if (condition) {
+                branch((int32_t)(pc) + (imm * 4));
             }
-            else 
-            {
-                if ((sw)base[rs] < 0) {
-                    branch(baddr);
-                }
-                break;
-            }
+            break;
+            // if (0x11 == rt)
+            // {
+            //     base[31] = pc + 4;
+                    
+            //     if ((sw)base[rs] >= 0) {
+            //         branch(baddr);
+            //     }
+            //     break;
+            // }
+            // if (0x10 == rt)
+            // {
+            //     base[31] = pc + 4;
+
+            //     if ((sw)base[rs] < 0) {
+            //         branch(baddr);
+            //     }
+            //     break;
+            // }
+            // if ((rt & 0x1) == 0x1) 
+            // {
+            //     if ((sw)base[rs] >= 0) {
+            //         branch(baddr);
+            //     }
+            //     break;
+            // }
+            // else 
+            // {
+            //     if ((sw)base[rs] < 0) {
+            //         branch(baddr);
+            //     }
+            //     break;
+            // }
+
 
             
         case 2: // J
@@ -533,8 +557,8 @@ switch(opcode) {
             break;
             
         case 32: // LB
-            setReg(rt, (sb)core->getMem()->read<ub>(ob));
-            // pushDelaySlot(core->getMem()->read<ub>(ob), rt);
+            // setReg(rt, (sb)core->getMem()->read<ub>(ob));
+            pushDelaySlot((sb)core->getMem()->read<ub>(ob), rt);
             break;
             
         case 33: // LH
@@ -544,11 +568,20 @@ switch(opcode) {
                 break;
             }
             setReg(rt, (sh)core->getMem()->read<uh>(ob));
-            // pushDelaySlot(core->getMem()->read<uh>(ob), rt); // TODO - Make deticated types
+            // pushDelaySlot((sh)core->getMem()->read<uh>(ob), rt); // TODO - Make deticated types
+            //This also breaks it?
             break;
             
         case 34: // LWL
-            opcodeLWx(<<, 0);
+            // opcodeLWx(<<, 0);
+            reg;
+            if (slots[0].reg == rt) { //IDK what this does, I took the idea from an emulator
+                reg = slots[0].data;
+            }
+            else {
+                reg = base[rt];
+            }
+            pushDelaySlot((reg & mask[0][ob & 3]) | (core->getMem()->read<uw>(ob & ~3) << shift[0][ob & 3]), rt);
             break;
             
         case 35: // LW
@@ -557,9 +590,10 @@ switch(opcode) {
                 exception(EXECPTION::ADRESS_ERROR_LOAD);
                 break;
             }
-            pushDelaySlot(core->getMem()->read<uw>(ob), rt);
+            // pushDelaySlot(core->getMem()->read<uw>(ob), rt);
             // fprintf(stderr, "reg: %x, data: %x\n", rt, core->getMem()->read<uw>(ob));
-            // setReg(rt, core->getMem()->read<uw>(ob));
+            //This is breaking stuff...
+            setReg(rt, core->getMem()->read<uw>(ob));
             break;
             
         case 36: // LBU
@@ -578,7 +612,15 @@ switch(opcode) {
             break;
             
         case 38: // LWR
-            opcodeLWx(>>, 1);
+            // opcodeLWx(>>, 1);
+            reg;
+            if (slots[0].reg == rt) { //IDK what this does, I took the idea from an emulator
+                reg = slots[0].data;
+            }
+            else {
+                reg = base[rt];
+            }
+            pushDelaySlot((reg & mask[1][ob & 3]) | (core->getMem()->read<uw>(ob & ~3) >> shift[1][ob & 3]), rt);
             break;
             
         case 40: // SB
@@ -745,10 +787,6 @@ void CPU::branch(uw addr)
 //Probably works
 void CPU::exception(EXECPTION code)
 {
-    if (isBranched) {
-        printx("  Exception %s", "branched");
-    }
-
     if (EXECPTION::INT == code) 
     {
         cause.interrupt = 1;
@@ -774,6 +812,12 @@ void CPU::exception(EXECPTION code)
         setpc(0xbfc00180);
     else 
         setpc(0x80000080);
+
+    if (isBranched) {
+        copr[14] -= 4;
+        cause.branch_delay = 1;
+        copr[6] = pc; //TODO - fix this
+    }
 }
 
 

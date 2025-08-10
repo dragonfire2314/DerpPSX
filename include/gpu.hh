@@ -388,6 +388,9 @@ public:
 	// 	DRAW_SHADED_TRIANGLE = 0x30,
 	// 	DRAW_SHADED_QUAD = 0x38
 	// };
+private:
+	int gpuDot = 0;
+	int gpuLine = 0;
 public:
 	//1mb of VRAM
 	uh* VRAM;
@@ -431,6 +434,8 @@ public:
 	void gpu_render();
 
 	void gpu_store_frame(void *image);
+
+	bool step(int cycles);
 
 	// GLuint gpu_LoadShaders(const char* vertex_file_path, const char* fragment_file_path);
 

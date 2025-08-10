@@ -45,6 +45,28 @@ void GPU::gpu_render()
 	// }
 }
 
+bool GPU::step(int cycles)
+{
+	gpuDot += cycles;
+
+	int newLines = gpuDot / 3413;
+    gpuDot %= 3413;
+    gpuLine += newLines;
+
+	// if (gpuLine < 263 - 20 - 1)
+	// {
+
+	// }
+
+	if (gpuLine == 263 - 1) 
+	{
+		gpuLine = 0;
+		return true;
+	}
+
+	return false;
+}
+
 void GPU::gpu_store_frame(void *image)
 {
 	//Income image is made with PS_Width and PS_Height at 16 bits per pixel
@@ -133,7 +155,7 @@ void GPU::Idle::dispatch(uw data, GPU* gpu)
 		new_state = new GPU::Draw_Monochrome_Rectangle_Fixed();
 		break;
 	case 0xa0:
-		printf("[GPU] 0xA0 Copy Rectangle\n");
+		// printf("[GPU] 0xA0 Copy Rectangle\n");
 		// commandState = CommandState::COPY_RECTANGLE_CPU_TO_VRAM;
 		new_state = new GPU::CopyRectangle_CPU_to_VRAM();
 		break;
