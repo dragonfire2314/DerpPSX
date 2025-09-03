@@ -99,7 +99,7 @@ private:
 
     union DISK_Status
     {
-        enum class Status {PLAY, READ, SEEK, PAUSE};
+        enum class Status {PLAY, READ, SEEK, PAUSE, NONE};
         struct 
         {
             ub error : 1;

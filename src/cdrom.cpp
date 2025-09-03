@@ -290,7 +290,7 @@ void CDROM::Command_Init()
     addInterrupt(3);
     setIntRespose(disk_status.reg);
 
-    disk_status.setStatus(DISK_Status::Status::READ);
+    disk_status.setStatus(DISK_Status::Status::NONE);
 
     addInterrupt(2);
     setIntRespose(disk_status.reg);

@@ -144,14 +144,16 @@ void CPU::step()
 
     execption_pc = pc;
 
+    //TODO status.interruptMask & cause.interrupt need to be read correctly for each interupt mask. 
+
     //Handle IRQs
-       if ((core->getIO()->i_stat & core->getIO()->i_mask) > 0) {
-           if (((status.reg & 0x400) & (cause.reg & 0x400)) && ((status.reg & 0x1) == 0x1)) 
-           {
-            //    printf("\033[1;36m%s: %x\033[0m\n", "IRQ WAS FIRED", (core->getIO()->i_stat & core->getIO()->i_mask));
-               exception(EXECPTION::INT);
-           }
-       }
+    if ((core->getIO()->i_stat & core->getIO()->i_mask) > 0) {
+        if (((status.interruptMask) & (cause.interrupt)) && (status.interruptEnable)) 
+        {
+            printf("\033[1;36m%s: %x\033[0m\n", "IRQ WAS FIRED", (core->getIO()->i_stat & core->getIO()->i_mask));
+            exception(EXECPTION::INT);
+        }
+    }
 
     if (pc == 0x3380 - 8)
     {
